@@ -5,7 +5,9 @@ import subprocess
 import json
 
 def get_repo_stats(report_path):
+    print(f"Reading report from: {report_path}")
     if not os.path.exists(report_path):
+        print(f"Report file not found: {report_path}")
         return None
     
     with open(report_path, 'r', encoding='utf-8') as f:
@@ -31,12 +33,14 @@ def get_repo_stats(report_path):
                 })
     
     if not repos:
+        print("No repository data found in the report table.")
         return None
     
     total = len(repos)
     readme_count = sum(1 for r in repos if '✅' in r['readme'])
     license_count = sum(1 for r in repos if '✅' in r['license'])
     
+    print(f"Stats extracted: Total={total}, README={readme_count}, License={license_count}")
     return {
         'total': total,
         'readme_pct': (readme_count / total * 100) if total > 0 else 0,
@@ -45,9 +49,16 @@ def get_repo_stats(report_path):
 
 def get_recent_activities():
     try:
+        # Try to get username from GITHUB_REPOSITORY or gh api
         repo_env = os.environ.get("GITHUB_REPOSITORY", "")
-        username = repo_env.split("/")[0] if "/" in repo_env else "placeholder"
+        if "/" in repo_env:
+            username = repo_env.split("/")[0]
+        else:
+            # Fallback to gh api
+            user_res = subprocess.run(["gh", "api", "user", "-q", ".login"], capture_output=True, text=True, check=True)
+            username = user_res.stdout.strip()
         
+        print(f"Fetching activity for user: {username}")
         result = subprocess.run(
             ["gh", "api", f"users/{username}/events"],
             capture_output=True,
@@ -84,6 +95,7 @@ def generate_dashboard():
     report_path = os.path.join(base_dir, 'HEALTH_REPORT.md')
     dashboard_path = os.path.join(base_dir, 'DASHBOARD.md')
     
+    print(f"Generating dashboard in {base_dir}")
     stats = get_repo_stats(report_path)
     activities = get_recent_activities()
     

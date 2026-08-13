@@ -1,54 +1,33 @@
 import os
-import requests
+import subprocess
 import argparse
+import json
 from datetime import datetime
 
 def audit_account_health(owner=None):
-    # Configuration
-    token = os.getenv('GH_PAT')
-    if not token:
-        print("Error: GH_PAT environment variable is not set.")
-        return False
-
-    headers = {
-        'Authorization': f'token {token}',
-        'Accept': 'application/vnd.github.v3+json'
-    }
-
     # Resolve absolute path for the report
-    # In GH Actions, GITHUB_WORKSPACE is provided.
     base_dir = os.getenv('GITHUB_WORKSPACE', os.getcwd())
     report_path = os.path.join(base_dir, 'HEALTH_REPORT.md')
 
-    # 1. Get public repositories
-    # If owner is provided, audit that specific user. Otherwise, audit the authenticated user.
+    # 1. Get public repositories using gh CLI
     if owner:
         print(f"Auditing repositories for owner: {owner}")
-        url = f'https://api.github.com/users/{owner}/repos?visibility=public&per_page=100'
+        cmd = ["gh", "api", f"users/{owner}/repos?visibility=public&per_page=100", "--paginate"]
     else:
         print("Auditing repositories for authenticated user")
-        url = 'https://api.github.com/user/repos?visibility=public&per_page=100'
-    
-    repos = []
+        cmd = ["gh", "api", "user/repos?visibility=public&per_page=100", "--paginate"]
     
     try:
-        while url:
-            response = requests.get(url, headers=headers)
-            if response.status_code == 401:
-                print("Error: Unauthorized. Please check your GH_PAT.")
-                return False
-            if response.status_code != 200:
-                print(f"Error fetching repositories: {response.status_code} - {response.text}")
-                return False
-            
-            repos.extend(response.json())
-            
-            if 'next' in response.links:
-                url = response.links['next']['url']
-            else:
-                url = None
-    except requests.exceptions.RequestException as e:
-        print(f"Network error occurred: {e}")
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        repos = json.loads(result.stdout)
+    except subprocess.CalledProcessError as e:
+        print(f"Error fetching repositories: {e.stderr}")
+        return False
+    except json.JSONDecodeError as e:
+        print(f"Error parsing repositories JSON: {e}")
+        return False
+    except Exception as e:
+        print(f"Unexpected error: {e}")
         return False
 
     # 2. Audit each repository
