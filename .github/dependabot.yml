@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    schedule:
+      interval: "weekly"
+    # Only update actions that are used in the organization
+  - package-ecosystem: "npm"
+    directories: ["/"]
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directories: ["/"]
+    schedule:
+      interval: "weekly"
