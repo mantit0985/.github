@@ -1,0 +1,23 @@
+name: Lint Markdown
+
+on:
+  push:
+    paths:
+      - '**/*.md'
+  pull_request:
+    paths:
+      - '**/*.md'
+  workflow_dispatch:
+
+jobs:
+  markdownlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run markdownlint
+        uses: davidanson/markdownlint-cli-action@v1
+        with:
+          # Use a standard config, but we can add a .markdownlint.json later
+          config: "default"
