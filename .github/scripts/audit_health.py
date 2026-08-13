@@ -1,8 +1,9 @@
 import os
 import requests
+import argparse
 from datetime import datetime
 
-def audit_account_health():
+def audit_account_health(owner=None):
     # Configuration
     token = os.getenv('GH_PAT')
     if not token:
@@ -15,12 +16,19 @@ def audit_account_health():
     }
 
     # Resolve absolute path for the report
-    # In GH Actions, GITHUB_WORKSPACE is provided. Otherwise, we use the current working directory.
-    base_dir = os.getenv('GITHUB_WORKSPACE', '/home/mantit0985/sandbox-repo')
+    # In GH Actions, GITHUB_WORKSPACE is provided.
+    base_dir = os.getenv('GITHUB_WORKSPACE', os.getcwd())
     report_path = os.path.join(base_dir, 'HEALTH_REPORT.md')
 
-    # 1. Get all public repositories for the authenticated user
-    url = 'https://api.github.com/user/repos?visibility=public&per_page=100'
+    # 1. Get public repositories
+    # If owner is provided, audit that specific user. Otherwise, audit the authenticated user.
+    if owner:
+        print(f"Auditing repositories for owner: {owner}")
+        url = f'https://api.github.com/users/{owner}/repos?visibility=public&per_page=100'
+    else:
+        print("Auditing repositories for authenticated user")
+        url = 'https://api.github.com/user/repos?visibility=public&per_page=100'
+    
     repos = []
     
     try:
@@ -84,7 +92,10 @@ def audit_account_health():
         with open(report_path, 'w', encoding='utf-8') as f:
             f.write("# 🏥 Account Health Report\n\n")
             f.write(f"**Generated on:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC\n\n")
-            f.write("This report provides an overview of the health of all public repositories in the account.\n\n")
+            if owner:
+                f.write(f"This report provides an overview of the health of public repositories for **{owner}**.\n\n")
+            else:
+                f.write("This report provides an overview of the health of all public repositories in the account.\n\n")
             f.write(markdown_table)
         print(f"Successfully wrote report to {report_path}")
         return True
@@ -93,5 +104,9 @@ def audit_account_health():
         return False
 
 if __name__ == '__main__':
-    if not audit_account_health():
+    parser = argparse.ArgumentParser(description="Audit GitHub account health.")
+    parser.add_argument('--owner', type=str, help="GitHub owner to audit. If omitted, audits authenticated user.")
+    args = parser.parse_args()
+
+    if not audit_account_health(owner=args.owner):
         exit(1)

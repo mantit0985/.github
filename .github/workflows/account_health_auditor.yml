@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: '0 0 * * *' # Daily at midnight
   workflow_dispatch: # Allow manual trigger
+  workflow_call: # Allow this workflow to be called from other repositories
+    inputs:
+      owner:
+        description: 'GitHub owner to audit'
+        required: false
+        type: string
+    secrets:
+      GH_PAT:
+        required: true
 
 jobs:
   audit:
@@ -28,7 +37,8 @@ jobs:
       - name: Run Health Audit
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
-        run: python .github/scripts/audit_health.py
+        run: |
+          python .github/scripts/audit_health.py ${{ inputs.owner && format('--owner {0}', inputs.owner) || '' }}
 
       - name: Commit and push report
         run: |

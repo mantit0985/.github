@@ -1,25 +1,39 @@
-## Description
-Please include a summary of the change and the relation to the issue. Close any associated issues.
+## 🎯 Purpose & Context
+**Problem Statement:** 
+*(Provide a concise technical explanation of the problem this PR solves. Reference the specific architectural pain point or bug.)*
 
-Fixes # (issue)
+**Proposed Solution:** 
+*(Explain the 'how' and 'why'. Detail the design decisions made and why this approach was chosen over alternatives.)*
 
-## Type of change
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Documentation update
+**Related Issues:** 
+- Closes #
+- Related to #
 
-## How Has This Been Tested?
-Please describe the tests that you ran to verify your changes.
+---
 
-- [ ] Unit tests
-- [ ] Integration tests
-- [ ] Manual testing
+## 🛠 Technical Impact
+- [ ] **Performance:** (Does this change time/space complexity? Provide benchmarks if applicable.)
+- [ ] **Security:** (Does this introduce new attack vectors or fix existing ones? Reference CVEs if applicable.)
+- [ ] **API Surface:** (Does this change public interfaces? If yes, is it backward compatible?)
+- [ ] **Dependencies:** (Does this add/update external libraries?)
 
-## Checklist:
-- [ ] My code follows the style guidelines of this project
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] My changes generate no new warnings
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
+---
+
+## 🧪 Verification & Quality Assurance
+**Test Strategy:**
+- [ ] **Unit Tests:** *(List new tests added and critical paths covered)*
+- [ ] **Integration Tests:** *(Describe the end-to-end flow verified)*
+- [ ] **Regression Testing:** *(How did you ensure existing functionality remains intact?)*
+- [ ] **Edge Cases:** *(Which boundary conditions were tested?)*
+
+**Evidence:**
+*(Attach logs, screenshots, or benchmark output here)*
+
+---
+
+## ✅ Definition of Done
+- [ ] **Self-Review:** I have audited my code for logic errors, redundant calls, and style consistency.
+- [ ] **Documentation:** All new/modified public APIs are documented in the codebase/wiki.
+- [ ] **Complexity:** The implementation avoids unnecessary abstraction and adheres to the project's architectural patterns.
+- [ ] **Warnings:** Build completes with zero new warnings.
+- [ ] **CI/CD:** All pipeline stages pass on the feature branch.
