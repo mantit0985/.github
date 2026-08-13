@@ -1,80 +1,24 @@
-name: Manage Project Board
+name: Manage Projects
 
 on:
+  schedule:
+    - cron: '0 0 * * 0'
   workflow_dispatch:
-    inputs:
-      repo_pattern:
-        description: 'Pattern to match repositories'
-        required: false
-        default: '*'
 
 jobs:
-  orchestrate-board:
+  orchestrate:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      projects: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup GH CLI
-        run: |
-          echo "Using GH CLI version: $(gh --version)"
-
-      - name: Initialize Master Roadmap Project
+      - name: Manage Project Board
         env:
-          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }} # Needs 'project' scope
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
         run: |
-          echo "Checking for 'Master Roadmap' project..."
-          PROJECT_ID=$(gh project list --owner "@me" --format json | jq -r '.[] | select(.title == "Master Roadmap") | .id')
-          
-          if [ -z "$PROJECT_ID" ]; then
-            echo "Creating 'Master Roadmap' project..."
-            PROJECT_ID=$(gh project create --owner "@me" --title "Master Roadmap" --format json | jq -r '.id')
-            echo "Created project with ID: $PROJECT_ID"
-          else
-            echo "Found project with ID: $PROJECT_ID"
+          if [ -z "$GH_TOKEN" ]; then
+            echo "⚠️ PROJECT_TOKEN not set. Skipping project board orchestration. Please add it to repository secrets to enable this feature."
+            exit 0
           fi
-          
-          echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
-
-      - name: Setup Project Columns
-        env:
-          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
-        run: |
-          COLUMNS=("Backlog" "In Progress" "Audit/Verification" "Done")
-          for COL in "${COLUMNS[@]}"; do
-            echo "Ensuring column '$COL' exists..."
-            # Check if field already exists
-            EXISTING=$(gh project field-list ${{ env.PROJECT_ID }} --owner "@me" --format json | jq -r ".[] | select(.name == \"$COL\") | .id")
-            if [ -z "$EXISTING" ]; then
-              gh project field-create ${{ env.PROJECT_ID }} --owner "@me" --name "$COL" --data-type "SINGLE_SELECT" --single-select-options "$COL"
-              echo "Created column $COL"
-            else
-              echo "Column $COL already exists."
-            fi
-          done
-
-      - name: Categorize Repositories
-        env:
-          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
-        run: |
-          # Fetch repositories based on pattern
-          REPOS=$(gh repo list @me --limit 100 --json name | jq -r '.[].name')
-          
-          for REPO in $REPOS; do
-            echo "Linking $REPO to Master Roadmap..."
-            gh project link ${{ env.PROJECT_ID }} --owner "@me" --add-repo "$REPO"
-            
-            # Example: Create a tracking item for the repo in the board and set it to 'Backlog'
-            # Note: Project items are usually issues. We create a 'Repository Tracking' draft item.
-            ITEM_ID=$(gh project item-create ${{ env.PROJECT_ID }} --owner "@me" --title "Repo: $REPO" --format json | jq -r '.id')
-            
-            # Find the Field ID for 'Backlog'
-            FIELD_ID=$(gh project field-list ${{ env.PROJECT_ID }} --owner "@me" --format json | jq -r '.[] | select(.name == "Backlog") | .id')
-            OPTION_ID=$(gh project field-list ${{ env.PROJECT_ID }} --owner "@me" --format json | jq -r '.[] | select(.name == "Backlog") | .singleSelectOptions[] | select(.name == "Backlog") | .id')
-            
-            gh project item-edit --id "$ITEM_ID" --project-id "${{ env.PROJECT_ID }}" --field-id "$FIELD_ID" --single-select-option-id "$OPTION_ID"
-            echo "Categorized $REPO as Backlog."
-          done
+          echo "Configuring Master Roadmap..."
+          gh project create --owner mantit0985 --title "Master Roadmap" || echo "Board already exists"
