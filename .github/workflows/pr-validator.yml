@@ -1,0 +1,42 @@
+name: 'PR Validator'
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Branch Name
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          echo "Checking branch name: $BRANCH_NAME"
+          if [[ ! "$BRANCH_NAME" =~ ^(feat/|fix/|chore/|docs/|refactor/|test/).* ]]; then
+            echo "Error: Branch name '$BRANCH_NAME' does not follow the naming convention (feat/, fix/, chore/, docs/, refactor/, test/)."
+            exit 1
+          fi
+
+      - name: Check for Linked Issue
+        run: |
+          PR_BODY="${{ github.event.pull_request.body }}"
+          echo "Checking PR body for linked issue..."
+          if [[ ! "$PR_BODY" =~ (Closes|Fixes|Resolves)\ #[0-9]+ ]]; then
+            echo "Error: PR body must contain a linked issue (e.g., 'Closes #123')."
+            exit 1
+          fi
+
+      - name: Check CI Status
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking if CI status is passing for the head commit..."
+          # This checks the combined status of the latest commit on the PR branch
+          STATUS=$(gh pr checks ${{ github.event.pull_request.number }} --json status --jq '.[0].status')
+          if [ "$STATUS" != "success" ]; then
+            echo "Error: CI status is $STATUS. All checks must pass before validation is successful."
+            exit 1
+          fi

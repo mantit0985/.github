@@ -1,0 +1,57 @@
+name: 'PR Labeler'
+description: 'Automatically adds labels to PRs based on the files changed'
+inputs:
+  github_token:
+    description: 'GitHub Token'
+    required: true
+  pr_number:
+    description: 'PR Number'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Determine Labels
+      shell: bash
+      run: |
+        # Get list of changed files
+        FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+        echo "Changed files: $FILES"
+        
+        LABELS=""
+        
+        if echo "$FILES" | grep -q ".github/"; then
+          LABELS="$LABELS governance,"
+        fi
+        
+        if echo "$FILES" | grep -q "src/"; then
+          LABELS="$LABELS source,"
+        fi
+        
+        if echo "$FILES" | grep -q "tests/"; then
+          LABELS="$LABELS tests,"
+        fi
+        
+        if echo "$FILES" | grep -q "README.md"; then
+          LABELS="$LABELS documentation,"
+        fi
+
+        # Remove trailing comma
+        LABELS=$(echo $LABELS | sed 's/,$//')
+        echo "LABELS=$LABELS" >> $GITHUB_ENV
+
+    - name: Apply Labels
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        if [ -n "$LABELS" ]; then
+          echo "Adding labels: $LABELS"
+          # Convert comma separated list to multiple --add-label flags
+          IFS=',' read -ra ADDR <<< "$LABELS"
+          for label in "${ADDR[@]}"; do
+            gh pr edit ${{ inputs.pr_number }} --add-label "$label"
+          done
+        else
+          echo "No labels to add."
+        fi
