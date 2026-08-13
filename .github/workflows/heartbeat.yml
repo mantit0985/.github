@@ -1,0 +1,16 @@
+name: RQE Heartbeat
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Daily
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger RQE Loop
+        run: |
+          echo "💓 Heartbeat detected. Triggering Recursive Quality Engine..."
+          # In a fully automated setup, this would call a webhook or an agent API.
+          # For now, it logs the trigger for the orchestrator.
