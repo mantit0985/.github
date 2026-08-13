@@ -1,0 +1,16 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Artifacts from RQE/Auditors
+OBSERVATIONS.json
+audit_results.txt
+DASHBOARD.md
+HEALTH_REPORT.md
+
+# Environment
+.env
