@@ -1,0 +1,13 @@
+name: Test CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test step
+        run: |
+          echo "✅ Test CI workflow working!"
+          echo "Testing environment: ${{ runner.os }}"
+          echo "Repo: ${{ github.repository }}"
