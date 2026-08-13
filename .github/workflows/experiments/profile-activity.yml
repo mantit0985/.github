@@ -1,0 +1,30 @@
+name: Profile Activity Tracker
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Daily at midnight
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  update-activity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Fetch Recent Activity
+        run: |
+          # Use gh CLI to fetch the latest events for the user
+          gh api /users/${{ github.repository_owner }}/events \
+            --jq '.[] | select(.type == "PushEvent") | {repo: .repo.name, commit: .payload.commits[0].message, date: .created_at}' \
+            > activity.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit and Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add activity.json
+          git commit -m "chore: update recent activity [skip ci]" || echo "No changes to commit"
+          git push

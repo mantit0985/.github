@@ -1,0 +1,21 @@
+name: Account Health Auditor
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Weekly on Sunday
+  workflow_dispatch:
+
+jobs:
+  audit-repos:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan Public Repos
+        run: |
+          echo "Scanning repositories for health..."
+          gh repo list ${{ github.repository_owner }} --limit 100 --json name,updatedAt,isPrivate \
+            --jq '.[] | select(.isPrivate == false) | "Repo: \(.name) | Last Updated: \(.updatedAt)"' > repo_health.txt
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log Results
+        run: cat repo_health.txt
