@@ -1,13 +1,16 @@
 # Manfred Titulaâh
 
-Hagenees. Sportieve systeme-knutselâh bij BrainXio.
-Geen spatjes, wel werkende zooi. Un beschuitstuitâh met sallûf d’r bij.
+Ik ben un Hagenees, gin Hagenaar.
+Sportieve systeme-knutselâh bij BrainXio.
+Ik knutsul an systeme tot ut doet wat ut mot doen. Geen spatjes, geen poespas.
+En ja: ik hou van un beschuitstuitâh met sallûf d’r bij.
 
-## Wat ik knutsul
-- **Systeme** — Rust, Go
-- **Applicaties** — Python, TypeScript
+## Wat ik alle dâhwe
+- **Systeme knappe** — Rust, Go
+- **Applicaties bouwe** — Python, TypeScript
 - **Infra as code** — Ansible, Terraform/OpenTofu
-- **Orkestratie** — Docker, Kubernetes, Linux, Proxmox
+- **Infra vastzette** — Docker, Kubernetes, Linux, Proxmox
 
-## Waar
-De Haag. Groen-geil. Tussen un bakkie pleur en twee toetsenborden.
+## Waar ik zit
+In De Haag. Groen-geil.
+Tussen twee toetsenborden en un bakkie pleur.
