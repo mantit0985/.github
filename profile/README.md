@@ -1,5 +1,6 @@
-# Manny Titsidu
-Software Engineer
+# Manfred Titulaer
+
+Hagenees. Systeme-knutselâh bij BrainXio.
 
 ## Core Competencies
 - Systems Programming (Rust, Go)
@@ -7,5 +8,5 @@ Software Engineer
 - Infrastructure & Orchestration (Docker, Kubernetes, Linux)
 
 ## Contact
-- Email: manny.titsidu@brainxio.org
+- Email: manfred.titulaer@brainxio.org
 - GitHub: [mantit0985](https://github.com/mantit0985)
