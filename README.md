@@ -26,3 +26,9 @@ For detailed instructions on how to manage this hub or add new satellite reposit
 
 ---
 *Part of the mantit0985 RQE Ecosystem*
+
+## Quick start
+
+1. Clone this repository.
+2. Install prerequisites from project files.
+3. Build and run the project's standard tests.
