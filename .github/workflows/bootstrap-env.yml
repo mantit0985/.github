@@ -1,0 +1,47 @@
+name: Bootstrap environment
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version to install'
+        required: false
+        type: string
+        default: ''
+      python-version:
+        description: 'Python version to install'
+        required: false
+        type: string
+        default: ''
+      go-version:
+        description: 'Go version to install'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: ${{ inputs.node-version != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'npm'
+
+      - name: Setup Python
+        if: ${{ inputs.python-version != '' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: 'pip'
+
+      - name: Setup Go
+        if: ${{ inputs.go-version != '' }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version }}

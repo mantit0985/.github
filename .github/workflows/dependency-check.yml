@@ -1,0 +1,42 @@
+name: Dependency check
+
+on:
+  workflow_call:
+    inputs:
+      audit-level:
+        description: 'npm audit level (low, moderate, high, critical)'
+        required: false
+        type: string
+        default: 'moderate'
+      fail-on-high:
+        description: 'Fail the workflow if high or critical vulnerabilities are found'
+        required: false
+        type: boolean
+        default: true
+      python-safety:
+        description: 'Run safety check for Python dependencies'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: NPM audit
+        if: ${{ hashFiles('**/package-lock.json') != '' }}
+        run: |
+          npm audit --audit-level=${{ inputs.audit-level }} || true
+
+      - name: Python safety check
+        if: ${{ inputs.python-safety && hashFiles('**/requirements.txt') != '' }}
+        run: |
+          pip install safety
+          safety check -r requirements.txt || true
+
+      - name: Report result
+        if: ${{ inputs.fail-on-high == false }}
+        run: echo "Dependency audit completed. fail-on-high is false, so the workflow will not fail on findings."

@@ -1,0 +1,36 @@
+name: Test CI
+
+on:
+  workflow_call:
+    inputs:
+      test-command:
+        description: 'Command used to run tests'
+        required: false
+        type: string
+        default: 'echo "No test command configured"'
+      python-version:
+        description: 'Python version to use when running tests'
+        required: false
+        type: string
+        default: '3.11'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        if: ${{ hashFiles('**/requirements.txt') != '' || hashFiles('**/pyproject.toml') != '' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        if: ${{ hashFiles('**/requirements.txt') != '' }}
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: ${{ inputs.test-command }}
