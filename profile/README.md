@@ -1,4 +1,4 @@
-# Many Titsidu
+# Manny Titsidu
 
 Systems engineer. I build and maintain systems until they do what they are supposed to do — no more, no less.
 
