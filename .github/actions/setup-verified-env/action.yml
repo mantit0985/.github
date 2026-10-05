@@ -1,0 +1,40 @@
+name: 'Setup verified environment'
+description: 'Configure Git and GPG for signed commits in reusable workflows.'
+
+inputs:
+  git_user_name:
+    description: 'Git user name'
+    required: true
+  git_user_email:
+    description: 'Git user email'
+    required: true
+  gpg_private_key:
+    description: 'GPG private key in ASCII-armored format'
+    required: false
+  gpg_passphrase:
+    description: 'GPG private key passphrase'
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Configure Git
+      shell: bash
+      run: |
+        git config --global user.name "${{ inputs.git_user_name }}"
+        git config --global user.email "${{ inputs.git_user_email }}"
+        git config --global commit.gpgsign true
+
+    - name: Import GPG key
+      if: ${{ inputs.gpg_private_key != '' }}
+      shell: bash
+      run: |
+        echo "${{ inputs.gpg_private_key }}" | gpg --batch --yes --import
+        if [ -n "${{ inputs.gpg_passphrase }}" ]; then
+          echo "${{ inputs.gpg_passphrase }}" | gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback --import
+        fi
+
+    - name: Verify GPG setup
+      if: ${{ inputs.gpg_private_key != '' }}
+      shell: bash
+      run: gpg --list-secret-keys --keyid-format LONG
