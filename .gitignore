@@ -8,3 +8,7 @@ Thumbs.db
 
 # Environment
 .env
+
+# Local Claude Code / Sand Castle loop state
+.claude/
+
