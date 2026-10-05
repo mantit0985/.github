@@ -1,4 +1,4 @@
-## Purpose
+# Purpose
 
 <!-- What problem does this PR solve? -->
 
@@ -6,12 +6,12 @@
 
 <!-- Summary of the changes made. -->
 
-## Closes #
+## Linked issue
 
 <!-- Replace with the issue number, e.g. Closes #12. -->
 
 ## Checklist
 
-- [ ] Branch name follows `feat/`, `fix/`, `chore/`, `docs/`, `refactor/`, or `test/`
+- [ ] Branch name follows `feat/`, `fix/`, `chore/`, `docs/`, `refactor/`, `test/`, or `gh-dev-loop/`
 - [ ] Commit messages follow Conventional Commits
 - [ ] Documentation updated where the change affects it

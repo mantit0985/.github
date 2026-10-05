@@ -17,9 +17,9 @@ assignees: ''
 
 ## Expected vs actual behavior
 
-**Expected:** 
+**Expected:**
 
-**Actual:** 
+**Actual:**
 
 ## Logs or screenshots
 

@@ -21,28 +21,30 @@ runs:
         LABELS=""
 
         if echo "$FILES" | grep -q "^\.github/"; then
-          LABELS="$LABELS governance,"
+          LABELS="${LABELS}governance,"
         fi
 
         if echo "$FILES" | grep -qE "^profile/|\.md$"; then
-          LABELS="$LABELS documentation,"
+          LABELS="${LABELS}documentation,"
         fi
 
-        # Remove trailing comma (quoted to avoid word splitting/globbing)
-        LABELS=$(echo "$LABELS" | sed 's/,$//')
+        # Remove trailing comma and any accidental whitespace
+        LABELS=$(echo "$LABELS" | sed 's/,$//; s/^ *//; s/ *$//')
         echo "LABELS=$LABELS" >> $GITHUB_ENV
 
     - name: Apply Labels
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github_token }}
+        PR_NUMBER: ${{ inputs.pr_number }}
       run: |
         if [ -n "$LABELS" ]; then
           echo "Adding labels: $LABELS"
           # Convert comma separated list to multiple --add-label flags
           IFS=',' read -ra ADDR <<< "$LABELS"
           for label in "${ADDR[@]}"; do
-            gh pr edit ${{ inputs.pr_number }} --add-label "$label"
+            label=$(echo "$label" | sed 's/^ *//; s/ *$//')
+            gh pr edit "$PR_NUMBER" --add-label "$label"
           done
         else
           echo "No labels to add."

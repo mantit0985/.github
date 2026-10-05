@@ -12,17 +12,19 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Validate Branch Name
+        env:
+          BRANCH_NAME: ${{ github.head_ref }}
         run: |
-          BRANCH_NAME="${{ github.head_ref }}"
           echo "Checking branch name: $BRANCH_NAME"
-          if [[ ! "$BRANCH_NAME" =~ ^(feat/|fix/|chore/|docs/|refactor/|test/).* ]]; then
-            echo "Error: Branch name '$BRANCH_NAME' does not follow the naming convention (feat/, fix/, chore/, docs/, refactor/, test/)."
+          if [[ ! "$BRANCH_NAME" =~ ^(feat/|fix/|chore/|docs/|refactor/|test/|gh-dev-loop/).* ]]; then
+            echo "Error: Branch name '$BRANCH_NAME' does not follow the naming convention (feat/, fix/, chore/, docs/, refactor/, test/, gh-dev-loop/)."
             exit 1
           fi
 
       - name: Check for Linked Issue
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          PR_BODY="${{ github.event.pull_request.body }}"
           echo "Checking PR body for linked issue..."
           if [[ ! "$PR_BODY" =~ (Closes|Fixes|Resolves)\ #[0-9]+ ]]; then
             echo "Error: PR body must contain a linked issue (e.g., 'Closes #123')."
@@ -32,12 +34,13 @@ jobs:
       - name: Check CI Status
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           # 'gh pr checks' reports one bucket per check: pass, fail, pending,
           # skipping, or cancel. Aggregate every check on the PR and fail
           # unless all are passing. This workflow's own check is excluded,
           # since it is always pending while it runs.
-          OUT=$(gh pr checks "${{ github.event.pull_request.number }}" --json bucket,workflow)
+          OUT=$(gh pr checks "$PR_NUMBER" --json bucket,workflow)
           echo "$OUT" | jq '.'
 
           if ! echo "$OUT" | jq -e 'all(.[]; .workflow == "PR Validator" or .bucket == "pass" or .bucket == "skipping")' > /dev/null; then
