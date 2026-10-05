@@ -10,6 +10,10 @@ Account-wide configuration hub for `mantit0985`. This repo provides the public p
 - `CONTRIBUTING.md`: Rules for contributing to this repository.
 - `MAINTENANCE.md`: How to maintain the workflows and settings in this repo.
 
+## Account-level defaults
+
+This repository also acts as a GitHub account-level `.github` repository. Default community health files and issue/PR templates stored here are inherited by other `mantit0985` repositories that do not define their own. See [standards.md](standards.md) for the full account-wide documentation contract.
+
 ## Contributing
 
-Branch names must follow the prefixes enforced by `pr-validator.yml` (`feat/`, `fix/`, `chore/`, `docs/`, `refactor/`, `test/`), commits use Conventional Commits, and PRs must reference an issue. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Branch names must follow the prefixes enforced by `pr-validator.yml` (`feat/`, `fix/`, `chore/`, `docs/`, `refactor/`, `test/`, or `gh-dev-loop/`), commits use Conventional Commits, and PRs must reference an issue. See [CONTRIBUTING.md](CONTRIBUTING.md).
