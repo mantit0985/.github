@@ -14,9 +14,16 @@ on:
         type: string
         default: '3.11'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,6 +38,10 @@ jobs:
       - name: Install dependencies
         if: ${{ hashFiles('**/requirements.txt') != '' }}
         run: pip install -r requirements.txt
+
+      - name: Install dependencies (pyproject.toml)
+        if: ${{ hashFiles('**/pyproject.toml') != '' && hashFiles('**/requirements.txt') == '' }}
+        run: pip install .
 
       - name: Run tests
         run: ${{ inputs.test-command }}

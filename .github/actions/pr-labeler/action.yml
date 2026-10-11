@@ -7,30 +7,51 @@ inputs:
   pr_number:
     description: 'PR Number'
     required: true
+  labels_config:
+    description: 'JSON mapping of labels to regex patterns. Example: {"governance": "^\\.github/", "documentation": "^profile/|\\.md$"}'
+    required: false
+    default: '{"governance": "^\\.github/", "documentation": "^profile/|\\.md$"}'
 
 runs:
   using: "composite"
   steps:
+    - name: Fetch base reference
+      shell: bash
+      run: git fetch origin ${{ github.base_ref }}
+
     - name: Determine Labels
       shell: bash
+      env:
+        BASE_REF: ${{ github.base_ref }}
+        LABELS_CONFIG: ${{ inputs.labels_config }}
       run: |
         # Get list of changed files
-        FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+        FILES=$(git diff --name-only origin/$BASE_REF...HEAD)
         echo "Changed files: $FILES"
 
         LABELS=""
 
-        if echo "$FILES" | grep -q "^\.github/"; then
-          LABELS="${LABELS}governance,"
-        fi
-
-        if echo "$FILES" | grep -qE "^profile/|\.md$"; then
-          LABELS="${LABELS}documentation,"
-        fi
+        # Iterate over the labels and patterns in the config using jq
+        while IFS= read -r label; do
+          pattern=$(echo "$LABELS_CONFIG" | jq -r --arg l "$label" '.[$l]')
+          if echo "$FILES" | grep -qE "$pattern"; then
+            LABELS="${LABELS}${label},"
+          fi
+        done < <(echo "$LABELS_CONFIG" | jq -r 'keys[]')
 
         # Remove trailing comma and any accidental whitespace
         LABELS=$(echo "$LABELS" | sed 's/,$//; s/^ *//; s/ *$//')
         echo "LABELS=$LABELS" >> $GITHUB_ENV
+
+    - name: Validate PR Number
+      shell: bash
+      env:
+        PR_NUMBER: ${{ inputs.pr_number }}
+      run: |
+        if ! [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+          echo "Error: pr_number must be a positive integer. Received: $PR_NUMBER"
+          exit 1
+        fi
 
     - name: Apply Labels
       shell: bash

@@ -1,5 +1,7 @@
 name: Bootstrap environment
 
+permissions: {}
+
 on:
   workflow_call:
     inputs:
@@ -21,14 +23,15 @@ on:
 
 jobs:
   setup:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         if: ${{ inputs.node-version != '' }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node-version }}
           cache: 'npm'
@@ -42,6 +45,7 @@ jobs:
 
       - name: Setup Go
         if: ${{ inputs.go-version != '' }}
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ inputs.go-version }}
+          cache: true

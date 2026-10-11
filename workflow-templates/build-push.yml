@@ -22,6 +22,10 @@
 
 name: build-push
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -42,13 +46,14 @@ env:
 
 jobs:
   build-push:
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Verify required registry configuration
         env:
@@ -83,7 +88,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             # :latest on pushes to the default branch only; never computed on PRs
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             # :sha-<short sha> on every build, e.g. sha-9c2f1ab.
             # For the bare full SHA instead, use: type=sha,format=long,prefix=
             type=sha

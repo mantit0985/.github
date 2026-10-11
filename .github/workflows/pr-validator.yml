@@ -3,6 +3,11 @@ name: 'PR Validator'
 on:
   pull_request:
     types: [opened, edited, synchronize]
+  workflow_dispatch:
+
+concurrency:
+  group: pr-validation-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 permissions:
   pull-requests: read
@@ -12,6 +17,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

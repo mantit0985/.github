@@ -1,5 +1,12 @@
 name: Lint Markdown
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 on:
   push:
     paths:
@@ -13,10 +20,13 @@ on:
 jobs:
   markdownlint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af67726221c1be1b93ad9ed58fa840aacc3f279cde2a72ff
 
       # Note: SHA-pinning this action is preferable long-term.
       - name: Run markdownlint
-        uses: DavidAnson/markdownlint-cli2-action@v24.2.0
+        uses: DavidAnson/markdownlint-cli2-action@4580e1612f6407034edd6c0e4e316d725920867b
+        with:
+          globs: '**/*.md'
