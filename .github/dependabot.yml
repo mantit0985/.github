@@ -4,3 +4,13 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Limit the number of open PRs to avoid clutter
+    open-pull-requests-limit: 5
+    # Group all GitHub Action updates into a single PR to reduce noise
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    # Add labels for better organization and automation
+    labels:
+      - "dependencies"
