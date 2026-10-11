@@ -1,33 +1,34 @@
-# Maintenance
+# Maintenance Guide
 
-This repository is the account-wide configuration hub for `mantit0985`. It contains the profile README source and repository hygiene settings for itself only.
+This repository manages the account-wide configuration and governance for `mantit0985`.
 
-## Current workflows
+## Workflow Inventory
 
-| Workflow | Trigger | Secrets |
+| Workflow | Trigger | Purpose |
 | :--- | :--- | :--- |
-| `.github/workflows/lint-markdown.yml` | Push or PR touching `.md` files, manual dispatch | None (checkout plus markdownlint action) |
-| `.github/workflows/pr-validator.yml` | Pull request opened, edited, or synchronized | Default `GITHUB_TOKEN` |
-| `.github/workflows/pr-labeler.yml` | Pull request opened or synchronized | Default `GITHUB_TOKEN` |
+| `lint-markdown.yml` | Push/PR to `.md` files | Ensures documentation consistency via markdownlint. |
+| `pr-validator.yml` | Pull Request | Enforces branch naming and issue referencing. |
+| `pr-labeler.yml` | Pull Request | Automatically applies labels based on changed files. |
 
-Dependabot is configured for the `github-actions` ecosystem (weekly).
+Dependabot is configured for the `github-actions` ecosystem with weekly updates.
 
-## Secrets
+## Secret Management
+All workflows operate using the default `GITHUB_TOKEN`. No personal access tokens (PATs) are stored in this repository. If `workflow_call` functionality is extended to other repositories, a scoped `GH_PAT` may be required.
 
-No personal access tokens are required. All workflows run on the default `GITHUB_TOKEN`. A scoped `GH_PAT` is only needed if `workflow_call` from other repositories is introduced later; `lint-markdown.yml` already declares `workflow_call` for that possibility.
+## Automation and Labeling
+The `pr-labeler.yml` workflow uses a local composite action to apply labels:
+- `governance`: Applied to changes within the `.github/` directory.
+- `documentation`: Applied to changes in Markdown files or the `profile/` directory.
 
-## Labeling
-
-`pr-labeler.yml` uses the local composite action `.github/actions/pr-labeler`. It applies `governance` for `.github/` changes and `documentation` for Markdown or `profile/` changes. The `governance` label was created manually with `gh label create` because nothing else provisions it.
-
-## Tasks
-
-- **Rebuild the profile README**: edit `profile/README.md` and push. There is no automation on it.
-- **Update the linter action**: `lint-markdown.yml` pins `DavidAnson/markdownlint-cli2-action`. SHA-pinning the version is preferable long-term.
-- **Disable stale workflows**: if a workflow file is deleted here, its registration on GitHub stays enabled and triggers from old default-branch history. Disable it via `gh api -X PUT repos/mantit0985/.github/actions/workflows/<id>/disable`.
+## Operational Tasks
+- **Profile Updates**: Edit `profile/README.md` and push to `main` to update the public account profile.
+- **Linter Updates**: Update the `DavidAnson/markdownlint-cli2-action` version. SHA-pinning is the preferred long-term strategy.
+- **Workflow Deactivation**: If a workflow file is removed, disable the registration via the GitHub API:
+  ```bash
+  gh api -X PUT repos/mantit0985/.github/actions/workflows/<id>/disable
+  ```
 
 ## Troubleshooting
-
-- **`GH007` error on push**: GitHub is rejecting a push because the commit was authored with a private email. Set Git to use the noreply address: `282219401+mantit0985@users.noreply.github.com`.
-- **Lint failure on push**: run `markdownlint` locally against the changed files, or check the action log, which names the file and rule.
-- **PRs failing validation**: `pr-validator.yml` requires a branch name with an enforced prefix and a `Closes #`, `Fixes #`, or `Resolves #` reference in the body. Edit the PR body, not the branch, if only the issue reference is missing.
+- **GH007 Push Error**: Occurs when commits use a private email. Use the GitHub noreply address: `282219401+mantit0985@users.noreply.github.com`.
+- **Lint Failures**: Run `markdownlint` locally or review the action logs for specific rule violations.
+- **Validation Failures**: Ensure the branch name has a valid prefix and the PR body contains a `Closes #`, `Fixes #`, or `Resolves #` reference.

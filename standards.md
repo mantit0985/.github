@@ -1,51 +1,47 @@
-# mantit0985 Repository Standards
+# Repository Standards
 
-This document defines the account-wide documentation and repository hygiene standards for all repositories under `mantit0985`.
+This document defines the documentation and hygiene standards for all repositories under the `mantit0985` account.
 
-## Required repository files
+## Mandatory Repository Files
+Every public repository must include the following files at the root:
 
-Every public repository must contain, at minimum:
+- `README.md`: Project description, usage guide, and contribution instructions.
+- `LICENSE`: The legal license under which the project is distributed.
 
-- `README.md` — describes the project, how to use it, and how to contribute.
-- `LICENSE` — the license under which the project is distributed.
+Repositories that do not provide these files will inherit the defaults defined in this `.github` repository.
 
-These files may live in the repository root. If a repository does not provide its own version, GitHub falls back to the default files in this `.github` repository.
+## Profile Configuration
+The public GitHub profile is driven by `profile/README.md` in this repository. All updates to the account bio and profile should be made here.
 
-## Profile README
+## Community Health Defaults
+This repository provides global defaults for the following files:
 
-The public GitHub profile uses `profile/README.md` from this `.github` repository. Edit that file to update the profile page.
+- `CODE_OF_CONDUCT.md`
+- `CONTRIBUTING.md`
+- `SECURITY.md`
+- `PULL_REQUEST_TEMPLATE.md`
+- `ISSUE_TEMPLATE/*`
 
-## Community health files
+Repositories may override these defaults by providing their own versions in their local `.github/` directory.
 
-This repository provides default community health files for all repositories in the account:
+## Template Requirements
 
-- `.github/CODE_OF_CONDUCT.md`
-- `.github/CONTRIBUTING.md`
-- `.github/SECURITY.md`
-- `.github/PULL_REQUEST_TEMPLATE.md`
-- `.github/ISSUE_TEMPLATE/*`
+### Issue Templates
+Templates must include valid frontmatter:
+- **Markdown**: `name:` and `about:`.
+- **YAML Forms**: `name:` and `description:`.
 
-Repositories may override these by providing their own versions in their `.github/` directory.
+### Pull Requests
+PR descriptions must explicitly link to a related issue using one of the following keywords: `Closes #`, `Fixes #`, or `Resolves #`.
 
-## Issue and pull request templates
+## Precedence
+Local repository files always take precedence over account-level defaults stored in this `.github` repository.
 
-Issue templates must include valid frontmatter:
+## Compliance Audit
+The following repositories were identified as missing required files during the RQE Phase 1 audit:
 
-- Markdown templates require `name:` and `about:`.
-- YAML issue forms require `name:` and `description:`.
-
-Pull request descriptions must link to a related issue using `Closes #123`, `Fixes #123`, or `Resolves #123`.
-
-## Repository-specific overrides
-
-A repository may override any default file by placing its own version in the same relative path. The local version takes precedence over the account-level default.
-
-## RQE Phase 1 findings
-
-The following repositories were identified as missing required files during RQE Phase 1. They should be created or populated according to this standard once they exist:
-
-- `.githooks` — missing README and LICENSE (issues #4, #5)
-- `playground` — missing README and LICENSE (issues #6, #7)
-- `scripts` — missing README and LICENSE (issues #8, #9)
-- `snippets` — missing README and LICENSE (issues #10, #11)
-- `dotfiles` — missing README (issue #13)
+- `.githooks`: Missing README and LICENSE
+- `playground`: Missing README and LICENSE
+- `scripts`: Missing README and LICENSE
+- `snippets`: Missing README and LICENSE
+- `dotfiles`: Missing README

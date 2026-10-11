@@ -1,0 +1,4 @@
+{
+    "name": "Build and push Docker image",
+    "description": "Builds a Docker image from a configurable Dockerfile and context, tags it for the project registry (registry.<SERVICE_DOMAIN>), and pushes it on pushes to main. Pull requests build without pushing. Requires the SERVICE_DOMAIN repository variable and the REGISTRY_USERNAME / REGISTRY_PASSWORD repository secrets."
+}

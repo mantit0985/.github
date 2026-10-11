@@ -1,35 +1,28 @@
-# Contributing
+# Contributing Guidelines
 
-This is a documentation-only meta repository: it holds the profile README source and this repository's own workflow and template configuration. Changes here are edits to Markdown and YAML.
+## Commit Messages
+We follow **Conventional Commits**. Every commit must start with one of the following types:
 
-## Setup
+- `feat:` A new feature or configuration addition
+- `fix:` A bug fix or correction
+- `chore:` Maintenance, tooling, or dependency updates
+- `docs:` Documentation changes
+- `refactor:` Code or configuration changes that neither fix a bug nor add a feature
+- `test:` Adding missing tests or correcting existing tests
 
-Fork or clone, then create a branch directly. There is no build step or test suite.
+Example: `docs(profile): update bio in profile README`
 
-## Branches
+## Pull Request Process
+1. **Branching**: Create a feature branch from `main`. Branch names must use the prefixes defined in the commit types (e.g., `feat/`, `fix/`).
+2. **Focus**: Keep PRs focused on a single change to facilitate review.
+3. **Referencing**: The PR body must reference a related issue using `Closes #`, `Fixes #`, or `Resolves #`.
+4. **Validation**: Ensure all status checks pass before requesting a merge.
+5. **Target**: Target the `main` branch.
 
-Branch names must use one of the prefixes enforced by `.github/workflows/pr-validator.yml`:
+## Documentation Standards
+- **Conciseness**: Write the least amount of text required to convey the maximum amount of information.
+- **Accuracy**: Outdated documentation is treated as a bug. Update documentation in the same PR that changes the feature it describes.
+- **Style**: Use a professional, neutral tone. Avoid emojis and colloquialisms.
 
-`feat/`, `fix/`, `chore/`, `docs/`, `refactor/`, `test/`
-
-PRs are validated against this and rejected otherwise.
-
-## Pull requests
-
-- Keep PRs focused on a single change.
-- The PR body must reference an issue with `Closes #`, `Fixes #`, or `Resolves #` — `pr-validator.yml` checks for it.
-- All status checks must pass before merge.
-- Branch off and target `master`.
-
-## Commits
-
-Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `style:`, `refactor:`, `perf:`, `test:`, `chore:`.
-
-## Documentation standards
-
-- Write the least amount of text required to convey the maximum amount of information.
-- Documentation is code. Outdated documentation is a bug — fix it in the same PR that changes the thing it describes.
-
-## Reporting issues
-
-Search existing issues first, then use the bug report or feature request template with concrete reproduction steps and expected versus actual behavior.
+## Reporting Issues
+Search existing issues first. When reporting, use the appropriate issue template and provide concrete reproduction steps, expected behavior, and actual behavior.

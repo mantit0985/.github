@@ -1,19 +1,24 @@
-# .github
+# .github - Account Configuration Hub
 
-Account-wide configuration hub for `mantit0985`. This repo provides the public profile README and repository-level hygiene settings; it is not a software project and holds no application code.
+This repository serves as the central configuration and governance hub for the `mantit0985` GitHub organization. It provides account-wide defaults, profile configuration, and repository hygiene standards.
 
-## Contents
+## Getting Started
 
-- `profile/README.md`: Source of the public profile README rendered at `github.com/mantit0985`. Edit it here; changes appear on the profile page directly.
-- `.github/workflows/`: Markdown linting, PR validation, and PR labeling for this repository.
-- `.github/ISSUE_TEMPLATE/`, `.github/PULL_REQUEST_TEMPLATE.md`: Issue and PR forms for this repository.
-- `CONTRIBUTING.md`: Rules for contributing to this repository.
-- `MAINTENANCE.md`: How to maintain the workflows and settings in this repo.
+### Purpose
+This repository is not a software project. It manages:
+- **Public Profile**: Source for the account profile README.
+- **Global Defaults**: Community health files (`CONTRIBUTING.md`, `SECURITY.md`, etc.) inherited by other repositories.
+- **Workflow Templates**: Standardized GitHub Actions for reuse across the organization.
 
-## Account-level defaults
+### Key Components
+- `profile/README.md`: The source for the public profile rendered at `github.com/mantit0985`.
+- `.github/workflow-templates/`: Reusable CI/CD templates for member repositories.
+- `standards.md`: The account-wide documentation and hygiene contract.
 
-This repository also acts as a GitHub account-level `.github` repository. Default community health files and issue/PR templates stored here are inherited by other `mantit0985` repositories that do not define their own. See [standards.md](standards.md) for the full account-wide documentation contract.
+## Governance
 
-## Contributing
+### Account-Level Inheritance
+Files stored in the root or `.github/` of this repository act as defaults for all other `mantit0985` repositories that do not define their own. This ensures consistency in security policies, contribution guidelines, and issue templates across the entire account.
 
-Branch names must follow the prefixes enforced by `pr-validator.yml` (`feat/`, `fix/`, `chore/`, `docs/`, `refactor/`, `test/`, or `gh-dev-loop/`), commits use Conventional Commits, and PRs must reference an issue. See [CONTRIBUTING.md](CONTRIBUTING.md).
+### Contributing
+Contributions to this hub must follow the guidelines outlined in [CONTRIBUTING.md](CONTRIBUTING.md), including the use of Conventional Commits and strict branch naming conventions.
