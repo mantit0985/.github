@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af67726221c1be1b93ad9ed58fa840aacc3f279cde2a72ff
+        uses: actions/checkout@v4
 
       # Note: SHA-pinning this action is preferable long-term.
       - name: Run markdownlint
