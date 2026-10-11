@@ -19,6 +19,7 @@ All workflows operate using the default `GITHUB_TOKEN`. No personal access token
 ## Automation and Labeling
 
 The `pr-labeler.yml` workflow uses a local composite action to apply labels:
+
 - `governance`: Applied to changes within the `.github/` directory.
 - `documentation`: Applied to changes in Markdown files or the `profile/` directory.
 

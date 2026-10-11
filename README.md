@@ -24,5 +24,3 @@ This repository is not a software project. It manages:
 
 Files stored in the root or `.github/` of this repository act as defaults for all other `mantit0985` repositories that do not define their own. This ensures consistency in security policies, contribution guidelines, and issue templates across the entire account.
 
-### Contributing
-
