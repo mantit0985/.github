@@ -27,11 +27,13 @@ The `pr-labeler.yml` workflow uses a local composite action to apply labels:
 - **Profile Updates**: Edit `profile/README.md` and push to `main` to update the public account profile.
 - **Linter Updates**: Update the `DavidAnson/markdownlint-cli2-action` version. SHA-pinning is the preferred long-term strategy.
 - **Workflow Deactivation**: If a workflow file is removed, disable the registration via the GitHub API:
+
   ```bash
   gh api -X PUT repos/mantit0985/.github/actions/workflows/<id>/disable
   ```
 
 ## Troubleshooting
+
 - **GH007 Push Error**: Occurs when commits use a private email. Use the GitHub noreply address: `282219401+mantit0985@users.noreply.github.com`.
 - **Lint Failures**: Run `markdownlint` locally or review the action logs for specific rule violations.
 - **Validation Failures**: Ensure the branch name has a valid prefix and the PR body contains a `Closes #`, `Fixes #`, or `Resolves #` reference.

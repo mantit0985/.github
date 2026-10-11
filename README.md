@@ -26,5 +26,3 @@ Files stored in the root or `.github/` of this repository act as defaults for al
 
 ### Contributing
 
-Contributions to this hub must follow the guidelines outlined in [CONTRIBUTING.md](CONTRIBUTING.md), including the use of Conventional Commits and strict branch naming conventions.
-

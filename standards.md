@@ -32,6 +32,7 @@ Repositories may override these defaults by providing their own versions in thei
 ### Issue Templates
 
 Templates must include valid frontmatter:
+
 - **Markdown**: `name:` and `about:`.
 - **YAML Forms**: `name:` and `description:`.
 
