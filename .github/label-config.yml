@@ -14,3 +14,4 @@ file_mappings:
   documentation: "^profile/|\\.md$"
   core: "^src/core/"
   api: "^src/api/"
+# Hub Config Version 1.1
