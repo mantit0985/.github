@@ -1,0 +1,16 @@
+# Version 1.1
+# Map branch prefixes to labels
+branch_mappings:
+  feat/: enhancement
+  fix/: bug
+  chore/: chore
+  docs/: documentation
+  refactor/: refactor
+  test/: test
+
+# Map file path regex to labels
+file_mappings:
+  governance: "^\\.github/"
+  documentation: "^profile/|\\.md$"
+  core: "^src/core/"
+  api: "^src/api/"
