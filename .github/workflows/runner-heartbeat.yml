@@ -1,0 +1,16 @@
+name: Runner Heartbeat
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  heartbeat:
+    runs-on: self-hosted
+    steps:
+      - name: Log System Health
+        run: |
+          echo "Heartbeat check at $(date)"
+          echo "Hostname: $(hostname)"
+          echo "Uptime: $(uptime -p)"
