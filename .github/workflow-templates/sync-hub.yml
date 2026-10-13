@@ -18,7 +18,7 @@ jobs:
 
       - name: Clone Hub Repo
         run: |
-          git clone --depth 1 https://github.com/mantit0985/.github /tmp/hub-repo
+          git clone --depth 1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/mantit0985/.github /tmp/hub-repo
 
       - name: Compare and Sync Files
         run: |
