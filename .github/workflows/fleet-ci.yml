@@ -41,7 +41,7 @@ jobs:
         run: |
           uvx ruff check .
           uvx ruff format --check .
-          uvx pyright
+          uv run --with pyright pyright
           uv run pytest
 
       - name: Setup Go
