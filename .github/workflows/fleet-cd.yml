@@ -1,4 +1,4 @@
-true:
+on:
   workflow_call:
     inputs:
       enable_ci_gate:
