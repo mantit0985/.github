@@ -82,6 +82,8 @@ jobs:
       - name: Go Lint
         if: inputs.language == 'go'
         uses: golangci/golangci-lint-action@v7
+        with:
+          working-directory: ${{ inputs.working-dir }}
 
       - name: Zig Setup
         if: inputs.language == 'zig'
@@ -100,7 +102,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build Verify
-        working-directory: ${{ inputs.working-dir }}
         run: ${{ inputs.build-verify-cmd }}
 
   security:
