@@ -95,6 +95,33 @@ jobs:
         working-directory: ${{ inputs.working-dir }}
         run: zig build
 
+      - name: Setup pnpm
+        if: inputs.language == 'nodejs'
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        if: inputs.language == 'nodejs'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22
+
+      - name: Node.js Checks
+        if: inputs.language == 'nodejs'
+        working-directory: ${{ inputs.working-dir }}
+        run: |
+          pnpm install
+          pnpm run lint
+          pnpm run type-check
+          pnpm run test
+
+      - name: C++ Build
+        if: inputs.language == 'cpp'
+        working-directory: ${{ inputs.working-dir }}
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -O2 main.cpp -o cpp-service
+
   build-verify:
     runs-on: self-hosted
     needs: [quality]
@@ -112,7 +139,7 @@ jobs:
       - name: Security Scan
         uses: mantit0985/.github/.github/actions/security-scan@main
         with:
-          semgrep_config: ${{ (inputs.language == 'rust' && 'p/rust' ) || (inputs.language == 'python' && 'p/python' ) || (inputs.language == 'go' && 'p/golang' ) || (inputs.language == 'rust-nostd' && 'p/rust' ) || (inputs.language == 'zig' && 'p/docker' ) }}
+          semgrep_config: ${{ (inputs.language == 'rust' && 'p/rust' ) || (inputs.language == 'python' && 'p/python' ) || (inputs.language == 'go' && 'p/golang' ) || (inputs.language == 'rust-nostd' && 'p/rust' ) || (inputs.language == 'zig' && 'p/docker' ) || (inputs.language == 'nodejs' && 'p/javascript' ) || (inputs.language == 'cpp' && 'p/auto' ) }}
           image_name: ${{ inputs.smoke-image }}
 
   smoke:
