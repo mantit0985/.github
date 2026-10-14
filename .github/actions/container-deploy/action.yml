@@ -11,7 +11,7 @@ inputs:
     description: 'Build target (e.g., runtime-slim, runtime-alpine, runtime-distroless)'
     required: true
   registry_token:
-    description: 'GHCR token passed from workflow',
+    description: 'GHCR token passed from workflow'
     required: false
     default: ''
 
