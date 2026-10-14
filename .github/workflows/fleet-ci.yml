@@ -79,6 +79,7 @@ jobs:
         uses: mantit0985/.github/.github/actions/security-scan@main
         with:
           semgrep_config: ${{ (inputs.language == 'rust' && 'p/rust') || (inputs.language == 'python' && 'p/python') || (inputs.language == 'go' && 'p/go') }}
+          image_name: ${{ inputs.smoke-image }}
 
   smoke:
     runs-on: self-hosted
