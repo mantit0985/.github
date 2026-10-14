@@ -25,6 +25,8 @@ jobs:
           fetch-depth: 0
 
       - name: Validate Branch Name
+        # Dependabot branches cannot follow the human naming convention
+        if: github.actor != 'dependabot[bot]'
         env:
           BRANCH_NAME: ${{ github.head_ref }}
         run: |
@@ -35,6 +37,8 @@ jobs:
           fi
 
       - name: Check for Linked Issue
+        # Dependabot PR bodies are auto-generated and never carry issue links
+        if: github.actor != 'dependabot[bot]'
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: |
@@ -45,6 +49,8 @@ jobs:
           fi
 
       - name: Template Validation
+        # Dependabot PRs cannot be edited to fill the required template
+        if: github.actor != 'dependabot[bot]'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -102,6 +108,8 @@ jobs:
           fi
 
       - name: Check CI Status
+        # Dependabot PRs trigger no template CI, so security-scan checks never exist for them
+        if: github.actor != 'dependabot[bot]'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
