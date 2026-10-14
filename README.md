@@ -11,7 +11,7 @@ This repository serves as the centralized governance and orchestration hub for t
 - **Symmetry**: Enforces the "One CI + One CD" contract across the entire fleet.
 - **Execution**: Optimized for `self-hosted` runners to leverage local hardware and avoid credit consumption.
 
-## 🏗️ Infrastructure Components
+##  Infrastructure Components
 
 ### 1. Reusable Workflows (`.github/workflows/`)
 
@@ -42,13 +42,13 @@ The standardized Continuous Deployment pipeline.
 | `smoke-test` | Health Probes | Automated `curl` probes for `/healthz`, `/readyz`, `/metrics`, and `/version`. |
 | `pr-labeler` | PR Labeling | Automates PR categorization based on branch prefixes and file patterns. |
 
-## 📜 The Symmetry Contract
+##  The Symmetry Contract
 To maintain operational stability, all fleet repositories must adhere to the **Symmetry Contract**:
 - **Exactly one CI run** per trigger.
 - **Exactly one CD run** per trigger.
 - **Strict Gating**: CD must never execute unless the corresponding CI run has concluded with `success`.
 
-## ⚙️ Operational Model
+##  Operational Model
 
 ### Pull-Based Synchronization
 Templates use a scheduled workflow to pull updates from this hub (e.g., PR templates, labeling configs) using their own `GITHUB_TOKEN`.
