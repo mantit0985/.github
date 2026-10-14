@@ -33,7 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           SHA='${{ github.sha }}'
-          API='https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha='"${SHA}"'
+          API='https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha='"${SHA}"
 
           latest_ci() {
             curl -sf \
