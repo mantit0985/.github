@@ -27,18 +27,16 @@ This repository provides global defaults for the following files:
 
 Repositories may override these defaults by providing their own versions in their local `.github/` directory.
 
-## Template Requirements
+## Template Governance (The Gold Standard)
 
-### Issue Templates
+All template repositories must adhere to the centralized governance model defined in this hub:
 
-Templates must include valid frontmatter:
+- **Workflow Centralization**: All CI/CD logic must be delegated to the hub's reusable workflows (`fleet-ci.yml` and `fleet-cd.yml`).
+- **Thin Wrappers**: Template `.github/workflows/` files must contain only triggers and the call to the hub.
+- **Symmetry Contract**: Exactly one CI and one CD run per trigger, with CD strictly gated by CI success.
+- **Runner Standard**: All workflows must run on `self-hosted` runners.
 
-- **Markdown**: `name:` and `about:`.
-- **YAML Forms**: `name:` and `description:`.
-
-### Pull Requests
-
-PR descriptions must explicitly link to a related issue using one of the following keywords: `Closes #`, `Fixes #`, or `Resolves #`.
+Refer to `ONBOARDING.md` for implementation details.
 
 ## Precedence
 

@@ -1,0 +1,119 @@
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        required: true
+        type: string
+      tag:
+        required: false
+        type: string
+        default: ''
+      enable_ci_gate:
+        required: false
+        type: boolean
+        default: false
+      release_cmd:
+        required: false
+        type: string
+        default: ''
+      release_artifact_path:
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  ci-gate:
+    if: ${{ inputs.enable_ci_gate }}
+    name: CI Quality Gate
+    runs-on: self-hosted
+    permissions:
+      actions: read
+    steps:
+      - name: Block until CI passes for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          SHA='${{ github.sha }}'
+          API='https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha='"${SHA}"
+
+          latest_ci() {
+            curl -sf \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H 'Accept: application/vnd.github+json' \
+              "${API}" | jq -c '[.workflow_runs[]? | select(.name == "CI")][0] // null'
+          }
+
+          # Wait (grace period) for a CI run for this exact commit to appear.
+          attempt=0
+          while :; do
+            RUN=$(latest_ci || echo null)
+            if [ "${RUN}" != 'null' ]; then
+              break
+            fi
+            attempt=$((attempt + 1))
+            if [ "${attempt}" -gt 10 ]; then
+              echo "::error::No CI run exists for commit ${SHA}; CD is blocked (CI must pass before CD)."
+              exit 1
+            fi
+            echo "Waiting for CI run on commit ${SHA} (attempt ${attempt}/10)..."
+            sleep 15
+          done
+
+          # Wait for that CI run to complete.
+          attempt=0
+          while :; do
+            RUN=$(latest_ci || echo null)
+            STATUS=$(printf '%s' "${RUN}" | jq -r '.status')
+            CONCLUSION=$(printf '%s' "${RUN}" | jq -r '.conclusion // empty')
+            RUN_ID=$(printf '%s' "${RUN}" | jq -r '.id // "unknown"')
+            echo "CI run ${RUN_ID}: status=${STATUS} conclusion=${CONCLUSION}"
+            if [ "${STATUS}" = 'completed' ]; then
+              if [ "${CONCLUSION}" = 'success' ]; then
+                echo "CI quality gate passed for commit ${SHA}."
+                exit 0
+              fi
+              echo "::error::CI concluded with '${CONCLUSION}' for commit ${SHA}; CD is blocked."
+              exit 1
+            fi
+            attempt=$((attempt + 1))
+            if [ "${attempt}" -gt 40 ]; then
+              echo "::error::Timed out waiting for CI on commit ${SHA}; CD is blocked."
+              exit 1
+            fi
+            sleep 30
+          done
+
+  release:
+    if: ${{ inputs.release_cmd != '' }}
+    name: Specialized Release
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag != '' && inputs.tag || github.sha }}
+      - name: Run Release Command
+        run: ${{ inputs.release_cmd }}
+      - name: Upload Artifact
+        if: ${{ inputs.release_artifact_path != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifact
+          path: ${{ inputs.release_artifact_path }}
+
+  deploy:
+    name: Container Deploy
+    runs-on: self-hosted
+    needs: [ci-gate, release]
+    strategy:
+      matrix:
+        target: [runtime-slim, runtime-alpine, runtime-distroless]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag != '' && inputs.tag || github.sha }}
+      - name: Container Deploy
+        uses: mantit0985/.github/.github/actions/container-deploy@main
+        with:
+          image_name: ${{ inputs.image_name }}
+          target: ${{ matrix.target }}

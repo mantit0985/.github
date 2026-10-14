@@ -7,10 +7,6 @@ inputs:
   pr_number:
     description: 'PR Number'
     required: true
-  labels_config:
-    description: 'JSON mapping of labels to regex patterns. Example: {"governance": "^\\.github/", "documentation": "^profile/|\\.md$"}'
-    required: false
-    default: '{"governance": "^\\.github/", "documentation": "^profile/|\\.md$"}'
 
 runs:
   using: "composite"
@@ -19,39 +15,51 @@ runs:
       shell: bash
       run: git fetch origin ${{ github.base_ref }}
 
+    - name: Read and Convert Config
+      shell: bash
+      run: |
+        CONFIG_PATH="src/github.com/mantit0985/.github/.github/label-config.yml"
+        if [ ! -f "$CONFIG_PATH" ]; then
+          echo "Error: Config file not found at $CONFIG_PATH"
+          exit 1
+        fi
+        python3 -c "
+import yaml, json
+with open('$CONFIG_PATH', 'r') as f:
+    print(json.dumps(yaml.safe_load(f)))
+" > config.json
+
     - name: Determine Labels
       shell: bash
       env:
         BASE_REF: ${{ github.base_ref }}
-        LABELS_CONFIG: ${{ inputs.labels_config }}
+        HEAD_REF: ${{ github.head_ref }}
       run: |
+        if [ ! -f "config.json" ]; then
+          echo "Error: config.json not found"
+          exit 1
+        fi
+        CONFIG_JSON=$(cat config.json)
+
         # Get list of changed files
         FILES=$(git diff --name-only origin/$BASE_REF...HEAD)
         echo "Changed files: $FILES"
 
-        LABELS=""
+        # Collect labels from branch and file mappings
+        ALL_LABELS=""
 
-        # Iterate over the labels and patterns in the config using jq
-        while IFS= read -r label; do
-          pattern=$(echo "$LABELS_CONFIG" | jq -r --arg l "$label" '.[$l]')
-          if echo "$FILES" | grep -qE "$pattern"; then
-            LABELS="${LABELS}${label},"
-          fi
-        done < <(echo "$LABELS_CONFIG" | jq -r 'keys[]')
-
-        # Remove trailing comma and any accidental whitespace
-        LABELS=$(echo "$LABELS" | sed 's/,$//; s/^ *//; s/ *$//')
-        echo "LABELS=$LABELS" >> $GITHUB_ENV
-
-    - name: Validate PR Number
-      shell: bash
-      env:
-        PR_NUMBER: ${{ inputs.pr_number }}
-      run: |
-        if ! [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
-          echo "Error: pr_number must be a positive integer. Received: $PR_NUMBER"
-          exit 1
+        if [ -n "$HEAD_REF" ]; then
+          echo "Checking branch: $HEAD_REF"
+          ALL_LABELS+="$(echo "$CONFIG_JSON" | jq -r --arg ref "$HEAD_REF" '.branch_mappings | to_entries | .[] | select($ref | startswith(.key)) | .value)'
+          echo ""
         fi
+
+        ALL_LABELS+="$(echo "$CONFIG_JSON" | jq -r --arg files "$FILES" '.file_mappings | to_entries | .[] | select($files | test(.value)) | .key')"
+
+        # Deduplicate and format as comma-separated
+        FINAL_LABELS=$(echo "$ALL_LABELS" | grep -v '^$' | sort -u | paste -sd "," -)
+
+        echo "LABELS=$FINAL_LABELS" >> $GITHUB_ENV
 
     - name: Apply Labels
       shell: bash
@@ -61,7 +69,6 @@ runs:
       run: |
         if [ -n "$LABELS" ]; then
           echo "Adding labels: $LABELS"
-          # Convert comma separated list to multiple --add-label flags
           IFS=',' read -ra ADDR <<< "$LABELS"
           for label in "${ADDR[@]}"; do
             label=$(echo "$label" | sed 's/^ *//; s/ *$//')

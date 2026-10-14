@@ -1,0 +1,37 @@
+name: 'Security Scan'
+description: 'Standardized SAST (Semgrep) and SCA (Trivy) scan sequence for the fleet'
+inputs:
+  semgrep_config:
+    description: 'Semgrep config to use (e.g., p/rust)'
+    required: true
+  image_name:
+    description: 'Image name to scan with Trivy'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Semgrep SAST
+      shell: bash
+      run: |
+        pip install --break-system-packages --ignore-installed semgrep
+        export PATH="$HOME/.local/bin:$PATH"
+        semgrep scan --config ${{ inputs.semgrep_config }} --config p/security-audit .
+
+    - name: Trivy FS Scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        ignore-unfixed: true
+        format: 'table'
+        exit-code: '1'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Trivy Image Scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ inputs.image_name }}
+        ignore-unfixed: true
+        format: 'table'
+        exit-code: '1'
+        severity: 'CRITICAL,HIGH'

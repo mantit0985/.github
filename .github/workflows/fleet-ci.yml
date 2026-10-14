@@ -1,0 +1,91 @@
+on:
+  workflow_call:
+    inputs:
+      language:
+        required: true
+        type: string
+      smoke-image:
+        required: true
+        type: string
+      build-verify-cmd:
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  quality:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        if: inputs.language == 'rust'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Rust Checks
+        if: inputs.language == 'rust'
+        run: |
+          cargo fmt --all --check
+          cargo clippy -- -D warnings
+          cargo install cargo-audit && cargo audit --deny warnings
+          cargo test
+
+      - name: Setup Python
+        if: inputs.language == 'python'
+        uses: astral-sh/setup-uv@v1
+
+      - name: Python Checks
+        if: inputs.language == 'python'
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run pyright
+          uv run pytest
+
+      - name: Setup Go
+        if: inputs.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Go Checks
+        if: inputs.language == 'go'
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then echo "gofmt failed" && exit 1; fi
+          go mod download
+          go test -v ./...
+
+      - name: Go Lint
+        if: inputs.language == 'go'
+        uses: golangci/golangci-lint-action@v7
+
+  build-verify:
+    runs-on: self-hosted
+    needs: [quality]
+    if: inputs.build-verify-cmd != ''
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Verify
+        run: ${{ inputs.build-verify-cmd }}
+
+  security:
+    runs-on: self-hosted
+    needs: [quality, build-verify]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Security Scan
+        uses: mantit0985/.github/.github/actions/security-scan@main
+        with:
+          semgrep_config: ${{ (inputs.language == 'rust' && 'p/rust') || (inputs.language == 'python' && 'p/python') || (inputs.language == 'go' && 'p/go') }}
+
+  smoke:
+    runs-on: self-hosted
+    needs: [security]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Smoke Test
+        uses: mantit0985/.github/.github/actions/smoke-test@main
+        with:
+          image_name: ${{ inputs.smoke-image }}

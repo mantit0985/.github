@@ -1,25 +1,58 @@
-# .github - Account Configuration Hub
+# .github - Fleet Control Plane
 
-This repository serves as the central configuration and governance hub for the `mantit0985` GitHub organization. It provides account-wide defaults, profile configuration, and repository hygiene standards.
+![Heartbeat](https://github.com/mantit0985/.github/actions/workflows/runner-heartbeat.yml/badge.svg)
+![Validator](https://github.com/mantit0985/.github/actions/workflows/pr-validator.yml/badge.svg)
+![License](https://img.shields.io/github/license/mantit0985/.github)
 
-## Getting Started
+This repository serves as the centralized governance and orchestration hub for the `mantit0985` template fleet. It defines the "Gold Standard" for CI/CD, security scanning, and deployment across all template repositories.
 
-### Purpose
+### Governance & Standards
+- **Centralization**: All CI/CD logic is delegated to the hub to eliminate duplication and maintenance toil.
+- **Symmetry**: Enforces the "One CI + One CD" contract across the entire fleet.
+- **Execution**: Optimized for `self-hosted` runners to leverage local hardware and avoid credit consumption.
 
-This repository is not a software project. It manages:
+## 🏗️ Infrastructure Components
 
-- **Public Profile**: Source for the account profile README.
-- **Global Defaults**: Community health files (`CONTRIBUTING.md`, `SECURITY.md`, etc.) inherited by other repositories.
-- **Workflow Templates**: Standardized GitHub Actions for reuse across the organization.
+### 1. Reusable Workflows (`.github/workflows/`)
 
-### Key Components
+#### `fleet-ci.yml`
+The standardized Continuous Integration pipeline.
+- **Pipeline**: `quality` $\rightarrow$ `build-verify` (optional) $\rightarrow$ `security` $\rightarrow$ `smoke`.
+- **Inputs**:
+    - `language` (Required): `rust`, `python`, `go`, `cpp`, `nodejs`, `zig`.
+    - `smoke-image` (Required): The container image for validation.
+    - `build-verify-cmd` (Optional): Custom command to build the target image.
 
-- `profile/README.md`: The source for the public profile rendered at `github.com/mantit0985`.
-- `.github/workflow-templates/`: Reusable CI/CD templates for member repositories.
-- `standards.md`: The account-wide documentation and hygiene contract.
+#### `fleet-cd.yml`
+The standardized Continuous Deployment pipeline.
+- **Pipeline**: `ci-gate` (optional) $\rightarrow$ `release` (optional) $\rightarrow$ `deploy`.
+- **Inputs**:
+    - `image_name` (Required): Base name of the image to deploy.
+    - `tag` (Optional): Specific git ref or tag.
+    - `enable_ci_gate` (Optional): API-based polling to block CD until CI success.
+    - `release_cmd` (Optional): Command for specialized binary releases.
+    - `release_artifact_path` (Optional): Path to the binary for artifact upload.
 
-## Governance
+### 2. Composite Actions (`.github/actions/`)
 
-### Account-Level Inheritance
+| Action | Purpose | Key Feature |
+| :--- | :--- | :--- |
+| `security-scan` | SAST & SCA | Integrates Semgrep (SAST) and Trivy (SCA) for both source and images. |
+| `container-deploy` | Multi-Target Push | Standardized build/push of `slim`, `alpine`, and `distroless` variants to GHCR. |
+| `smoke-test` | Health Probes | Automated `curl` probes for `/healthz`, `/readyz`, `/metrics`, and `/version`. |
+| `pr-labeler` | PR Labeling | Automates PR categorization based on branch prefixes and file patterns. |
 
-Files stored in the root or `.github/` of this repository act as defaults for all other `mantit0985` repositories that do not define their own. This ensures consistency in security policies, contribution guidelines, and issue templates across the entire account.
+## 📜 The Symmetry Contract
+To maintain operational stability, all fleet repositories must adhere to the **Symmetry Contract**:
+- **Exactly one CI run** per trigger.
+- **Exactly one CD run** per trigger.
+- **Strict Gating**: CD must never execute unless the corresponding CI run has concluded with `success`.
+
+## ⚙️ Operational Model
+
+### Pull-Based Synchronization
+Templates use a scheduled workflow to pull updates from this hub (e.g., PR templates, labeling configs) using their own `GITHUB_TOKEN`.
+
+### Hub Internal Governance
+- `pr-validator.yml`: Enforces Conventional Commits, PR template completion, and the "No Emojis" rule.
+- `runner-heartbeat.yml`: Monitors the connectivity and health of the self-hosted runners on `edge-gpu-02`.
