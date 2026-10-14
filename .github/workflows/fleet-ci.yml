@@ -76,7 +76,8 @@ jobs:
       - name: Zig Setup
         if: inputs.language == 'zig'
         uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29
-
+        with:
+          zig-version: '0.13.0'
       - name: Zig Build
         if: inputs.language == 'zig'
         run: zig build
