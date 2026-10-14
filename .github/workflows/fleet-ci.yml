@@ -16,7 +16,7 @@ jobs:
   quality:
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Rust
         if: inputs.language == 'rust'
@@ -46,7 +46,7 @@ jobs:
 
       - name: Setup Python
         if: inputs.language == 'python'
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@v7
 
       - name: Python Checks
         if: inputs.language == 'python'
@@ -58,7 +58,7 @@ jobs:
 
       - name: Setup Go
         if: inputs.language == 'go'
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: '1.26'
 
@@ -71,7 +71,7 @@ jobs:
 
       - name: Go Lint
         if: inputs.language == 'go'
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v9
 
       - name: Zig Setup
         if: inputs.language == 'zig'
@@ -86,7 +86,7 @@ jobs:
     needs: [quality]
     if: inputs.build-verify-cmd != ''
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build Verify
         run: ${{ inputs.build-verify-cmd }}
 
@@ -94,7 +94,7 @@ jobs:
     runs-on: self-hosted
     needs: [quality, build-verify]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Security Scan
         uses: mantit0985/.github/.github/actions/security-scan@main
         with:
@@ -105,7 +105,7 @@ jobs:
     runs-on: self-hosted
     needs: [security]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Smoke Test
         uses: mantit0985/.github/.github/actions/smoke-test@main
         with:

@@ -62,7 +62,7 @@ jobs:
       packages: write
     runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         ref: ${{ inputs.tag != '' && inputs.tag || github.sha }}
     - name: Container Deploy
@@ -83,14 +83,14 @@ jobs:
     name: Specialized Release
     runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         ref: ${{ inputs.tag != '' && inputs.tag || github.sha }}
     - name: Run Release Command
       run: ${{ inputs.release_cmd }}
     - if: ${{ inputs.release_artifact_path != '' }}
       name: Upload Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: release-artifact
         path: ${{ inputs.release_artifact_path }}
