@@ -61,6 +61,14 @@ jobs:
         if: inputs.language == 'go'
         uses: golangci/golangci-lint-action@v7
 
+      - name: Zig Setup
+        if: inputs.language == 'zig'
+        uses: mlugg/setup-zig@main
+
+      - name: Zig Build
+        if: inputs.language == 'zig'
+        run: zig build
+
   build-verify:
     runs-on: self-hosted
     needs: [quality]
