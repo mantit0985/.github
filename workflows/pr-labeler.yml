@@ -1,0 +1,17 @@
+# PR Labeler Wrapper
+# This workflow simply calls the re‑usable pr‑labeler action from the hub.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  label:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mantit0985/.github/.github/actions/pr-labeler@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          pr_number: ${{ github.event.pull_request.number }}
