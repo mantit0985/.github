@@ -1,118 +1,118 @@
-1  on:
-2    workflow_call:
-3      inputs:
-4        image_name:
-5          required: true
-6          type: string
-7        tag:
-8          required: false
-9          type: string
-10          default: ''
-11        enable_ci_gate:
-12          required: false
-13          type: boolean
-14          default: false
-15        release_cmd:
-16          required: false
-17          type: string
-18          default: ''
-19        release_artifact_path:
-20          required: false
-21          type: string
-22          default: ''
-23
-24  jobs:
-25    ci-gate:
-26      if: ${{ inputs.enable_ci_gate }}
-27      name: CI Quality Gate
-28      runs-on: self-hosted
-29      steps:
-30        - name: Block until CI passes for this commit
-31          env:
-32            GH_TOKEN: ${{ github.token }}
-33          run: |
-34            set -euo pipefail
-35            SHA='${{ github.sha }}'
-36            API='https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha="${SHA}"
-37
-38            latest_ci() {
-39              curl -sf \
-40                -H "Authorization: Bearer ${GH_TOKEN}" \
-41                -H 'Accept: application/vnd.github+json' \
-42                "${API}" | jq -c '[.workflow_runs[]? | select(.name == "CI")][0] // null'
-43            }
-44
-45            # Wait (grace period) for a CI run for this exact commit to appear.
-46            attempt=0
-47            while :; do
-48              RUN=$(latest_ci || echo null)
-49              if [ "${RUN}" != 'null' ]; then
-50                break
-51              fi
-52              attempt=$((attempt + 1))
-53              if [ "${attempt}" -gt 10 ]; then
-54                echo "::error::No CI run exists for commit ${SHA}; CD is blocked (CI must pass before CD)."
-55                exit 1
-56              fi
-57              echo "Waiting for CI run on commit ${SHA} (attempt ${attempt}/10)..."
-58              sleep 15
-59            done
-60
-61            # Wait for that CI run to complete.
-62            attempt=0
-63            while :; do
-64              RUN=$(latest_ci || echo null)
-65              STATUS=$(printf '%s' "${RUN}" | jq -r '.status')
-66              CONCLUSION=$(printf '%s' "${RUN}" | jq -r '.conclusion // empty')
-67              RUN_ID=$(printf '%s' "${RUN}" | jq -r '.id // "unknown"')
-68              echo "CI run ${RUN_ID}: status=${STATUS} conclusion=${CONCLUSION}"
-69              if [ "${STATUS}" = 'completed' ]; then
-70                if [ "${CONCLUSION}" = 'success' ]; then
-71                  echo "CI quality gate passed for commit ${SHA}."
-72                  exit 0
-73                fi
-74                echo "::error::CI concluded with '${CONCLUSION}' for commit ${SHA}; CD is blocked."
-75                exit 1
-76              fi
-77              attempt=$((attempt + 1))
-78              if [ "${attempt}" -gt 40 ]; then
-79                echo "::error::Timed out waiting for CI on commit ${SHA}; CD is blocked."
-80                exit 1
-81              fi
-82              sleep 30
-83            done
-84
-85    release:
-86      if: ${{ inputs.release_cmd != '' }}
-87      name: Specialized Release
-88      runs-on: self-hosted
-89      steps:
-90        - uses: actions/checkout@v4
-91          with:
-92            ref: ${{ inputs.tag != '' && inputs.tag || github.sha }}
-93        - name: Run Release Command
-94          run: ${{ inputs.release_cmd }}
-95        - name: Upload Artifact
-96          if: ${{ inputs.release_artifact_path != '' }}
-97          uses: actions/upload-artifact@v4
-98          with:
-99            name: release-artifact
-100            path: ${{ inputs.release_artifact_path }}
-101
-102    deploy:
-103      name: Container Deploy
-104      runs-on: self-hosted
-105      needs: [ci-gate, release]
-106      strategy:
-107        matrix:
-108          target: [runtime-slim, runtime-alpine, runtime-distroless]
-109      steps:
-110        - uses: actions/checkout@v4
-111          with:
-112            ref: ${{ inputs.tag != '' && inputs.tag || github.sha }}
-113        - name: Container Deploy
-114          uses: mantit0985/.github/.github/actions/container-deploy@main
-115          with:
-116            image_name: ${{ inputs.image_name }}
-117            tag: ${{ inputs.tag != '' && inputs.tag || github.sha }}
-118            target: ${{ matrix.target }}
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        required: true
+        type: string
+      tag:
+        required: false
+        type: string
+        default: ''
+      enable_ci_gate:
+        required: false
+        type: boolean
+        default: false
+      release_cmd:
+        required: false
+        type: string
+        default: ''
+      release_artifact_path:
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  ci-gate:
+    if: ${{ inputs.enable_ci_gate }}
+    name: CI Quality Gate
+    runs-on: self-hosted
+    steps:
+      - name: Block until CI passes for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          SHA='${{ github.sha }}'
+          API='https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha="${SHA}"
+
+          latest_ci() {
+            curl -sf \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H 'Accept: application/vnd.github+json' \
+              "${API}" | jq -c '[.workflow_runs[]? | select(.name == "CI")][0] // null'
+          }
+
+          # Wait (grace period) for a CI run for this exact commit to appear.
+          attempt=0
+          while :; do
+            RUN=$(latest_ci || echo null)
+            if [ "${RUN}" != 'null' ]; then
+              break
+            fi
+            attempt=$((attempt + 1))
+            if [ "${attempt}" -gt 10 ]; then
+              echo "::error::No CI run exists for commit ${SHA}; CD is blocked (CI must pass before CD)."
+              exit 1
+            fi
+            echo "Waiting for CI run on commit ${SHA} (attempt ${attempt}/10)..."
+            sleep 15
+          done
+
+          # Wait for that CI run to complete.
+          attempt=0
+          while :; do
+            RUN=$(latest_ci || echo null)
+            STATUS=$(printf '%s' "${RUN}" | jq -r '.status')
+            CONCLUSION=$(printf '%s' "${RUN}" | jq -r '.conclusion // empty')
+            RUN_ID=$(printf '%s' "${RUN}" | jq -r '.id // "unknown"')
+            echo "CI run ${RUN_ID}: status=${STATUS} conclusion=${CONCLUSION}"
+            if [ "${STATUS}" = 'completed' ]; then
+              if [ "${CONCLUSION}" = 'success' ]; then
+                echo "CI quality gate passed for commit ${SHA}."
+                exit 0
+              fi
+                ::error::CI concluded with '${CONCLUSION}' for commit ${SHA}; CD is blocked.
+                              exit 1
+            fi
+            attempt=$((attempt + 1))
+            if [ "${attempt}" -gt 40 ]; then
+              echo "::error::Timed out waiting for CI on commit ${SHA}; CD is blocked."
+              exit 1
+            fi
+            sleep 30
+          done
+
+  release:
+    if: ${{ inputs.release_cmd != '' }}
+    name: Specialized Release
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag != '' && inputs.tag || github.sha }}
+      - name: Run Release Command
+        run: ${{ inputs.release_cmd }}
+      - name: Upload Artifact
+        if: ${{ inputs.release_artifact_path != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifact
+          path: ${{ inputs.release_artifact_path }}
+
+  deploy:
+    name: Container Deploy
+    runs-on: self-hosted
+    needs: [ci-gate, release]
+    strategy:
+      matrix:
+        target: [runtime-slim, runtime-alpine, runtime-distroless]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag != '' && inputs.tag || github.sha }}
+      - name: Container Deploy
+        uses: mantit0985/.github/.github/actions/container-deploy@main
+        with:
+          image_name: ${{ inputs.image_name }}
+          tag: ${{ inputs.tag != '' && inputs.tag || github.sha }}
+          target: ${{ matrix.target }}
