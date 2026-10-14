@@ -39,9 +39,9 @@ jobs:
       - name: Python Checks
         if: inputs.language == 'python'
         run: |
-          uv run ruff check .
-          uv run ruff format --check .
-          uv run pyright
+          uvx ruff check .
+          uvx ruff format --check .
+          uvx pyright
           uv run pytest
 
       - name: Setup Go
