@@ -100,6 +100,8 @@ jobs:
           path: ${{ inputs.release_artifact_path }}
 
   deploy:
+    if: ${{ !cancelled() && !failure() }}
+
     name: Container Deploy
     runs-on: self-hosted
     needs: [ci-gate, release]
