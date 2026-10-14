@@ -26,8 +26,7 @@ jobs:
     if: ${{ inputs.enable_ci_gate }}
     name: CI Quality Gate
     runs-on: self-hosted
-    permissions:
-      actions: read
+    # permissions block removed
     steps:
       - name: Block until CI passes for this commit
         env:
@@ -35,7 +34,7 @@ jobs:
         run: |
           set -euo pipefail
           SHA='${{ github.sha }}'
-          API='https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha='"${SHA}"
+          API='https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha="${SHA}"
 
           latest_ci() {
             curl -sf \
@@ -73,7 +72,7 @@ jobs:
                 echo "CI quality gate passed for commit ${SHA}."
                 exit 0
               fi
-              echo "::error::CI concluded with '${CONCLUSION}' for commit ${SHA}; CD is blocked."
+              echo "::error::CI concluded with \${CONCLUSION} for commit ${SHA}; CD is blocked."
               exit 1
             fi
             attempt=$((attempt + 1))
@@ -116,4 +115,5 @@ jobs:
         uses: mantit0985/.github/.github/actions/container-deploy@main
         with:
           image_name: ${{ inputs.image_name }}
+          tag: ${{ inputs.tag != '' && inputs.tag || github.sha }}
           target: ${{ matrix.target }}
