@@ -20,6 +20,10 @@ on:
         default: ''
         required: false
         type: string
+      working-dir:
+        required: false
+        type: string
+        default: '.'
 jobs:
   ci-gate:
     if: ${{ inputs.enable_ci_gate }}
@@ -72,6 +76,8 @@ jobs:
         registry_token: ${{ secrets.GITHUB_TOKEN }}
         tag: ${{ inputs.tag != '' && inputs.tag || github.sha }}
         target: ${{ matrix.target }}
+        context: ${{ inputs.working-dir }}
+
     strategy:
       matrix:
         target:
