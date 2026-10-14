@@ -105,6 +105,8 @@ jobs:
     name: Container Deploy
     runs-on: self-hosted
     needs: [ci-gate, release]
+    permissions:
+      packages: write
     strategy:
       matrix:
         target: [runtime-slim, runtime-alpine, runtime-distroless]
@@ -115,6 +117,7 @@ jobs:
       - name: Container Deploy
         uses: mantit0985/.github/.github/actions/container-deploy@main
         with:
+          registry_token: ${{ secrets.GITHUB_TOKEN }}
           image_name: ${{ inputs.image_name }}
           tag: ${{ inputs.tag != '' && inputs.tag || github.sha }}
           target: ${{ matrix.target }}
