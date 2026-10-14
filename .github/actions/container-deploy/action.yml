@@ -18,10 +18,6 @@ inputs:
     description: 'Build arguments passed to docker build'
     required: false
     default: ''
-    context:
-      description: 'Build context directory relative to the workspace'
-      required: false
-      default: '.'
   context:
     description: 'Build context directory relative to the workspace'
     required: false
