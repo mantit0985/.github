@@ -75,7 +75,7 @@ jobs:
 
       - name: Zig Setup
         if: inputs.language == 'zig'
-        uses: mlugg/setup-zig@v2.2.1
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29
 
       - name: Zig Build
         if: inputs.language == 'zig'
@@ -98,7 +98,7 @@ jobs:
       - name: Security Scan
         uses: mantit0985/.github/.github/actions/security-scan@main
         with:
-          semgrep_config: ${{ (inputs.language == 'rust' && 'p/rust') || (inputs.language == 'python' && 'p/python') || (inputs.language == 'go' && 'p/golang') }}
+          semgrep_config: ${(inputs.language == 'rust' && 'p/rust') || (inputs.language == 'python' && 'p/python') || (inputs.language == 'go' && 'p/golang') || (inputs.language == 'rust-nostd' && 'p/rust')}
           image_name: ${{ inputs.smoke-image }}
 
   smoke:
