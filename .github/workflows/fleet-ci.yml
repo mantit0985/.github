@@ -11,6 +11,10 @@ on:
         required: false
         type: string
         default: ''
+      working-dir:
+        required: false
+        type: string
+        default: '.'
 
 jobs:
   quality:
@@ -26,6 +30,7 @@ jobs:
 
       - name: Rust Checks
         if: inputs.language == 'rust'
+        working-directory: ${{ inputs.working-dir }}
         run: |
           cargo fmt --all --check
           cargo clippy -- -D warnings
@@ -34,14 +39,17 @@ jobs:
 
       - name: Rust Targets
         if: inputs.language == 'rust-nostd'
+        working-directory: ${{ inputs.working-dir }}
         run: rustup target add thumbv7em-none-eabihf
 
       - name: Nostd Build
         if: inputs.language == 'rust-nostd'
+        working-directory: ${{ inputs.working-dir }}
         run: cargo build --target thumbv7em-none-eabihf
 
       - name: Nostd Clippy
         if: inputs.language == 'rust-nostd'
+        working-directory: ${{ inputs.working-dir }}
         run: cargo fmt --all --check && cargo clippy --target thumbv7em-none-eabihf -- -D warnings
 
       - name: Setup Python
@@ -50,6 +58,7 @@ jobs:
 
       - name: Python Checks
         if: inputs.language == 'python'
+        working-directory: ${{ inputs.working-dir }}
         run: |
           uvx ruff check .
           uvx ruff format --check .
@@ -64,6 +73,7 @@ jobs:
 
       - name: Go Checks
         if: inputs.language == 'go'
+        working-directory: ${{ inputs.working-dir }}
         run: |
           if [ -n "$(gofmt -l .)" ]; then echo "gofmt failed" && exit 1; fi
           go mod download
@@ -80,6 +90,7 @@ jobs:
           version: '0.13.0'
       - name: Zig Build
         if: inputs.language == 'zig'
+        working-directory: ${{ inputs.working-dir }}
         run: zig build
 
   build-verify:
@@ -89,6 +100,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build Verify
+        working-directory: ${{ inputs.working-dir }}
         run: ${{ inputs.build-verify-cmd }}
 
   security:
