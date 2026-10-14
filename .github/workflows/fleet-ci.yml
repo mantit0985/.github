@@ -98,7 +98,7 @@ jobs:
       - name: Security Scan
         uses: mantit0985/.github/.github/actions/security-scan@main
         with:
-          semgrep_config: ${{ (inputs.language == 'rust' && 'p/rust') || (inputs.language == 'python' && 'p/python') || (inputs.language == 'go' && 'p/go') }}
+          semgrep_config: ${{ (inputs.language == 'rust' && 'p/rust') || (inputs.language == 'python' && 'p/python') || (inputs.language == 'go' && 'p/golang') }}
           image_name: ${{ inputs.smoke-image }}
 
   smoke:
