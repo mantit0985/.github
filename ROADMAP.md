@@ -19,7 +19,9 @@ Fleet control-plane roadmap. Landed work moves to the **Delivered** section with
 - **Fresh reset endgame** — reset packages, recreate the repos as fresh public repositories with pristine commit history, each starting at tag `v0.1.0` with a matching release package (operator decision 2026-10-15; current private history is scaffolding).
 - **Release creator attribution** — evaluate a fine-grained PAT so releases stop showing `github-actions[bot]` as creator (operator rejected the bot attribution; decision pending on the trade-off).
 
+- **github-actions-runner repo: reusable-workflow adoption** — implement the hub reusable workflows for the `mantit0985/github-actions-runner` repo (bespoke `CI.yml`/`CD.yml` reworked toward the fleet reusable pattern), EXCLUDING the deploy workflow.
 ## Delivered (2026-10-15)
+
 
 - **Release trigger, end-to-end on the canary** — pre-push gate with 4 assertions (tag==VERSION, tag==main tip, CI green, valid signature), server-side recheck in the reusable `release.yml`, changelog-sourced release bodies, slug-safe source tarball + `SHA256SUMS`, locally detached GPG signature, and the publish helper `.github/hooks/release-publish.sh` (proven at v0.1.2 and fully at v0.1.3).
 - **ci-gate contracts** — callers enabling `enable_ci_gate` grant `actions: read` in their wrapper permissions; reusable `cd.yml` carries no job-level permissions (caller startup-failure lesson).
