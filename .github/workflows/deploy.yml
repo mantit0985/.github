@@ -31,7 +31,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Run deploy engine
         id: engine
-        uses: ./.github/actions/deploy-engine
+        uses: mantit0985/.github/.github/actions/deploy-engine@main
         env:
           DEPLOY_SSH_KEY: ${{ inputs.ssh_key_secret_name != '' && secrets[format('{0}', inputs.ssh_key_secret_name)] || '' }}
         with:
