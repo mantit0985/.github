@@ -11,6 +11,10 @@ on:
         required: false
         type: string
         default: ''
+      quality-cmd:
+        required: false
+        type: string
+        default: ''
       working-dir:
         required: false
         type: string
@@ -116,8 +120,12 @@ jobs:
           pnpm run type-check
           pnpm run test
 
+      - name: C++ Quality (custom)
+        if: inputs.language == 'cpp' && inputs.quality-cmd != ''
+        working-directory: ${{ inputs.working-dir }}
+        run: ${{ inputs.quality-cmd }}
       - name: C++ Build
-        if: inputs.language == 'cpp'
+        if: inputs.language == 'cpp' && inputs.quality-cmd == ''
         working-directory: ${{ inputs.working-dir }}
         run: |
           g++ -std=c++17 -Wall -Wextra -Werror -O2 main.cpp -o cpp-service
