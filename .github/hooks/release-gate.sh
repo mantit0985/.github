@@ -49,7 +49,7 @@ fi
 echo "PASS[2] Tag commit matches remote main tip"
 
 # 3. Check latest CI run for that commit.
-REPO=$(git remote get-url --push origin | sed -E 's|.*github\.com[/:]([^/]+)/([^/]+?)(\.git)?/?$|\1/\2|')
+REPO=$(git remote get-url --push origin | sed -E -e 's|\.git/?$||' -e 's|.*github\.com[/:]([^/]+)/([^/]+)/?$|\1/\2|')
 # gh API requires https://api.github.com/...; gh handles auth via GITHUB_TOKEN env.
 CI_CONCLUSION=$(gh api repos/${REPO}/actions/runs?head_sha=${TAG_COMMIT} |
   jq -r '.workflow_runs[] | select(.name=="CI") | .conclusion' | head -n1)
