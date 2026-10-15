@@ -1,0 +1,62 @@
+name: Deploy Stack
+on:
+  workflow_call:
+    inputs:
+      manifest_path:
+        required: false
+        type: string
+        default: 'deploy/deployments.json'
+      ssh_key_secret_name:
+        required: false
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      manifest_path:
+        required: false
+        type: string
+        default: 'deploy/deployments.json'
+      ssh_key_secret_name:
+        required: false
+        type: string
+        default: ''
+permissions:
+  contents: read
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run deploy engine
+        id: engine
+        uses: ./.github/actions/deploy-engine
+        env:
+          DEPLOY_SSH_KEY: ${{ inputs.ssh_key_secret_name != '' && secrets[format('{0}', inputs.ssh_key_secret_name)] || '' }}
+        with:
+          manifest_path: ${{ inputs.manifest_path }}
+          ssh_key_secret_name: ${{ inputs.ssh_key_secret_name }}
+      - name: Defensive cleanup
+        if: always()
+        run: |
+          set -euo pipefail
+          PATHS="${{ steps.engine.outputs.cleanup_paths }}"
+          if [ -z "${PATHS}" ]; then
+            echo '::notice::No cleanup paths emitted by deploy engine; nothing to do'
+            exit 0
+          fi
+          TEMP_BASE="${RUNNER_TEMP}/deploy-engine/${GITHUB_RUN_ID}"
+          while IFS= read -r p; do
+            [ -z "$p" ] && continue
+            if [ "$p" = "$TEMP_BASE" ]; then
+              rm -rf -- "$p"
+              echo "Cleaned engine temp dir: $p"
+            elif [ -L "$p" ]; then
+              rm -- "$p"
+              echo "Removed leftover checkout symlink: $p"
+            else
+              echo "Skipped (not engine temp dir or symlink): $p"
+            fi
+          done <<< "${PATHS}"
+          echo '[deploy-engine] Defensive cleanup complete'

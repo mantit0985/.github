@@ -1,0 +1,14 @@
+name: 'Deploy Engine'
+description: 'Declarative docker compose deployment engine driven by deploy/deployments.json manifests'
+inputs:
+  manifest_path:
+    description: 'Path to the deployment manifest, relative to the workspace'
+    required: false
+    default: 'deploy/deployments.json'
+  ssh_key_secret_name:
+    description: 'Name of the repository secret holding the SSH private key for ssh deployment contexts'
+    required: false
+    default: ''
+runs:
+  using: node24
+  main: index.js
