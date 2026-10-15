@@ -20,3 +20,10 @@ git config core.hooksPath <repo-root>/.github/hooks
 `RELEASE_GATE_SKIP=i-accept-red-releases` temporarily disables the gate for testing.
 
 All scripts are POSIX‑sh compliant and designed to be run on any hosted runner.
+## Release publishing (post-gate)
+
+After the release gate passes and the signed tag is on origin, publish and verify locally:
+
+`.github/hooks/release-publish.sh <owner/repo> <tag>`
+
+Sequence: dispatches the hub `release.yml` workflow, watches it to success, downloads the source tarball + `SHA256SUMS`, verifies checksums, detach-signs `SHA256SUMS` with the local GPG key (override with `RELEASE_KEY=<keyid>`; default `5EFC12ED8C0F0586`), uploads `SHA256SUMS.sig` to the release, and verifies the signature. The private key never leaves the operator machine.
