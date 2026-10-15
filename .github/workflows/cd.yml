@@ -28,6 +28,9 @@ jobs:
   ci-gate:
     if: ${{ inputs.enable_ci_gate }}
     name: CI Quality Gate
+    permissions:
+      contents: read
+      actions: read
     runs-on: self-hosted
     steps:
     - env:

@@ -30,6 +30,7 @@ The standardized Continuous Deployment pipeline.
     - `image_name` (Required): Base name of the image to deploy.
     - `tag` (Optional): Specific git ref or tag.
     - `enable_ci_gate` (Optional): API-based polling to block CD until CI success.
+NOTE: callers enabling `enable_ci_gate` must declare `actions: read` (with `contents: read`) in their wrapper workflow's permissions, because the ci-gate job queries the Actions API.
     - `release_cmd` (Optional): Command for specialized binary releases.
     - `release_artifact_path` (Optional): Path to the binary for artifact upload.
 
