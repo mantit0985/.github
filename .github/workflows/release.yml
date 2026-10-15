@@ -154,7 +154,7 @@ jobs:
             shopt -s globstar dotglob
             cp -r ${{ inputs.release_artifact_path }} "${TARGET_DIR}/"
           else
-            tar -czf "${TARGET_DIR}/${GITHUB_REPOSITORY////-}-${{ inputs.tag }}-source.tar.gz" --exclude=.git .
+            tar -czf "${TARGET_DIR}/${GITHUB_REPOSITORY//\//-}-${{ inputs.tag }}-source.tar.gz" --exclude=.git .
           fi
           # Generate SHA256SUMS
           (cd "${TARGET_DIR}" && find . -type f -print0 | sort -z | xargs -0 sha256sum --) > "$RUNNER_TEMP/SHA256SUMS"
