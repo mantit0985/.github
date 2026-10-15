@@ -38,6 +38,14 @@ All template repositories must adhere to the centralized governance model define
 
 Refer to `ONBOARDING.md` for implementation details.
 
+## Release Versioning
+
+All repositories version with Semantic Versioning (`MAJOR.MINOR.PATCH`), tagged `vX.Y.Z` and released through the signed-tag flow.
+
+- **0.x — pre-stability.** Versions `0.y.z` signal active development: behavior may still change and nothing is stable yet. The first release of any repository — including the first release after a fresh re-creation — is **`v0.1.0`**, with a matching release package.
+- **1.0.0 — reserved for the proven milestone.** `1.0.0` is only cut when a repo is settled and battle-tested and its contracts are ready to stabilize. From `1.0.0` on, breaking changes bump `MAJOR`.
+- The mechanical release discipline (signed tags, pre-push release gate, server-side rechecks, changelog-sourced bodies) is specified in the release-trigger contract.
+
 ## Precedence
 
 Local repository files always take precedence over account-level defaults stored in this `.github` repository.
