@@ -4,10 +4,11 @@ Fleet control-plane roadmap. Landed work moves to the **Delivered** section with
 
 ## In progress
 
-### Deployment engine (v1) — hub `.github/workflows/deploy.yml` + `deploy/deployments.json`
-- Data-driven pipeline: a JSON manifest in the consuming repo declares deployments; the hub engine reads it with `jq` and executes.
+### Deployment engine (v1) — Node.js action `.github/actions/deploy-engine` + reusable `deploy.yml` + `deploy/deployments.json`
+- Architecture (operator decision 2026-10-15): the engine is a Node.js (stdlib-only, node24) GitHub ACTION at `.github/actions/deploy-engine`; a thin reusable `.github/workflows/deploy.yml` is the fleet entry point.
+- Data-driven pipeline: a JSON manifest in the consuming repo declares deployments; the engine parses it natively (no jq) and executes.
 - Manifest schema v1: `name`, `platform` (`docker` in v1), `context` (socket | ssh), `compose_file`, `project_name`, `env_files` with sources `secret:<NAME>` | `generated` | `file:<path>`, `healthcheck` (url/retries/interval).
-- Engine behavior: validate manifest → materialize env files at deploy time (600-perm temp files, secret values masked, never echoed, cleaned up) → `docker compose -p <project> up -d --build` on the declared context → health probe → teardown.
+- Engine behavior: validate manifest (structured errors, unknown platform = loud refusal) → materialize env files (600-perm temp files, secret values masked via add-mask, never echoed, cleaned up) → `docker compose -p <project> up -d --build` on the declared context (socket | ssh) → health probe → teardown, with a defensive `always()` bash step for crashed-node cleanup.
 - Proving ground: the canary `mantit0985/.github-testing` compose stack (`compose.yaml` + `compose.override.yaml`).
 
 ## Next
