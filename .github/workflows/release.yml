@@ -149,13 +149,13 @@ jobs:
         shell: bash
         run: |
           TARGET_DIR=$(mktemp -d)
-            TAG="${{ inputs.tag }}"
+          TAG="${{ inputs.tag }}"
           echo "TARGET_DIR=$TARGET_DIR" >> "$GITHUB_ENV"
           if [ -n "${{ inputs.release_artifact_path }}" ]; then
             shopt -s globstar dotglob
             cp -r ${{ inputs.release_artifact_path }} "${TARGET_DIR}/"
           else
-            tar -czf "${TARGET_DIR}/${GITHUB_REPOSITORY//\\//-}-${TAG}-source.tar.gz" --exclude=.git .
+            tar -czf "${TARGET_DIR}/${GITHUB_REPOSITORY//\//-}-${TAG}-source.tar.gz" --exclude=.git .
           fi
           # Generate SHA256SUMS
           (cd "${TARGET_DIR}" && find . -type f -print0 | sort -z | xargs -0 sha256sum --) > "$RUNNER_TEMP/SHA256SUMS"
