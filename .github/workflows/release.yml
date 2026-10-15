@@ -1,0 +1,163 @@
+name: Release Trigger
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+      release_cmd:
+        required: false
+        type: string
+        default: ""
+      release_artifact_path:
+        required: false
+        type: string
+        default: ""
+      working-dir:
+        required: false
+        type: string
+        default: "."
+  workflow_dispatch:
+    inputs:
+      tag:
+        required: true
+        type: string
+      release_cmd:
+        required: false
+        type: string
+        default: ""
+      release_artifact_path:
+        required: false
+        type: string
+        default: ""
+      working-dir:
+        required: false
+        type: string
+        default: "."
+
+permissions:
+  contents: write
+
+jobs:
+  gate-recheck:
+    name: Release Gate Recheck
+    runs-on: self-hosted
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+
+      - name: Verify tag name vs VERSION
+        shell: bash
+        run: |
+          TAG="${{ inputs.tag }}"
+          VERSION_CONTENT=$(git show HEAD:VERSION 2>/dev/null || echo "")
+          VERSION=$(echo "$VERSION_CONTENT" | tr -d '[:space:]')
+          TAG_NUM=${TAG#v}
+          VER_NUM=${VERSION#v}
+          if [ "$TAG_NUM" != "$VER_NUM" ]; then
+            echo "FAIL[1]: Tag $TAG not equal to VERSION $VERSION" >&2
+            exit 1
+          fi
+          echo "PASS[1] Tag matches VERSION"
+
+      - name: Verify tagged commit is main tip
+        shell: bash
+        run: |
+          TAG_COMMIT=$(git rev-parse HEAD)
+          REPO=$(git remote get-url --push origin | sed -E 's|.*github.com/([^/]+)/([^/.]+)(\.git)?$|\1/\2|')
+          MAIN_COMMIT=$(gh api repos/${REPO}/commits/main --jq '.sha')
+          if [ "$TAG_COMMIT" != "$MAIN_COMMIT" ]; then
+            echo "FAIL[2]: Tag commit $TAG_COMMIT not equal to main tip $MAIN_COMMIT" >&2
+            exit 1
+          fi
+          echo "PASS[2] Tagged commit is current main tip"
+
+      - name: Verify latest CI run succeeded
+        shell: bash
+        run: |
+          TAG_COMMIT=$(git rev-parse HEAD)
+          REPO=$(git remote get-url --push origin | sed -E 's|.*github.com/([^/]+)/([^/.]+)(\.git)?$|\1/\2|')
+          CI_CONCLUSION=$(gh api repos/${REPO}/actions/runs?head_sha=${TAG_COMMIT} |
+            jq -r '.workflow_runs[] | select(.name=="CI") | .conclusion' | head -n1)
+          if [ -z "$CI_CONCLUSION" ]; then
+            echo "FAIL[3]: No CI run found for commit $TAG_COMMIT" >&2
+            exit 1
+          fi
+          if [ "$CI_CONCLUSION" != "success" ]; then
+            echo "FAIL[3]: CI run concluded $CI_CONCLUSION" >&2
+            exit 1
+          fi
+          echo "PASS[3] Latest CI run succeeded"
+
+      - name: Verify GPG signed tag
+        shell: bash
+        run: |
+          TAG="${{ inputs.tag }}"
+          mkdir -p -m 700 "$RUNNER_TEMP/gnupg"
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          gh api users/mantit0985/gpg_keys --jq '.[0].raw_key' | gpg --import
+          if ! git verify-tag "refs/tags/$TAG" > /dev/null 2>&1; then
+            echo "FAIL[4]: Tag $TAG failed GPG verification" >&2
+            exit 1
+          fi
+          echo "PASS[4] Tag is GPG signed"
+
+  release:
+    name: Publish Release
+    needs: gate-recheck
+    runs-on: self-hosted
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+
+      - name: Run release command if specified
+        if: ${{ inputs.release_cmd != '' }}
+        working-directory: ${{ inputs.working-dir }}
+        run: ${{ inputs.release_cmd }}
+
+      - name: Prepare artifacts
+        shell: bash
+        run: |
+          TARGET_DIR=$(mktemp -d)
+          echo "TARGET_DIR=$TARGET_DIR" >> "$GITHUB_ENV"
+          if [ -n "${{ inputs.release_artifact_path }}" ]; then
+            shopt -s globstar dotglob
+            cp -r ${{ inputs.release_artifact_path }} "${TARGET_DIR}/"
+          else
+            tar -czf "${TARGET_DIR}/${{ github.repository }}-${{ inputs.tag }}-source.tar.gz" --exclude=.git .
+          fi
+          # Generate SHA256SUMS
+          (cd "${TARGET_DIR}" && find . -type f -print0 | sort -z | xargs -0 sha256sum --) > "$RUNNER_TEMP/SHA256SUMS"
+          echo "Artifacts prepared in ${TARGET_DIR}"
+
+      - name: Check for existing release
+        shell: bash
+        run: |
+          if gh release view "${{ inputs.tag }}" >/dev/null 2>&1; then
+            echo "RELEASE_EXISTS: Release ${{ inputs.tag }} already exists" >&2
+            exit 1
+          fi
+
+      - name: Create release
+        shell: bash
+        run: |
+          cd "$TARGET_DIR"
+          gh release create "${{ inputs.tag }}" --verify-tag \
+            --title "${{ inputs.tag }}" \
+            --notes "Release of commit $(git rev-parse HEAD)" \
+            $(find . -type f | sed 's|^\./||')
+
+      - name: Upload SHA256SUMS
+        shell: bash
+        run: |
+          gh release upload "${{ inputs.tag }}" "$RUNNER_TEMP/SHA256SUMS" --clobber
+
