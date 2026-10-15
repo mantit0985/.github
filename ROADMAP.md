@@ -4,7 +4,7 @@ Fleet control-plane roadmap. Landed work moves to the **Delivered** section with
 
 ## In progress
 
-### Deployment engine (v1) — Node.js action `.github/actions/deploy-engine` + reusable `deploy.yml` + `deploy/deployments.json`
+### Deployment engine (v0.1.0) — Node.js action `.github/actions/deploy-engine` + reusable `deploy.yml` + `deploy/deployments.json`
 - Architecture (operator decision 2026-10-15): the engine is a Node.js (stdlib-only, node24) GitHub ACTION at `.github/actions/deploy-engine`; a thin reusable `.github/workflows/deploy.yml` is the fleet entry point.
 - Data-driven pipeline: a JSON manifest in the consuming repo declares deployments; the engine parses it natively (no jq) and executes.
 - Manifest schema v1: `name`, `platform` (`docker` in v1), `context` (socket | ssh), `compose_file`, `project_name`, `env_files` with sources `secret:<NAME>` | `generated` | `file:<path>`, `healthcheck` (url/retries/interval).
@@ -13,8 +13,8 @@ Fleet control-plane roadmap. Landed work moves to the **Delivered** section with
 
 ## Next
 
-- **Deployment engine v2** — `platform: kubernetes` (own design round: kubeconfig secret handling, kubectl availability, native k8s manifests vs compose mapping).
-- **Deployment engine v3+** — further common platforms, driven by demand.
+- **Deployment engine v0.2.0** — `platform: kubernetes` (own design round: kubeconfig secret handling, kubectl availability, native k8s manifests vs compose mapping).
+- **Deployment engine v0.3+** — further common platforms, driven by demand.
 - **Release trigger rollout to the 9 language templates** — uniform root `VERSION`, `core.hooksPath` wiring to hub hooks, onboarding docs (held: explicit operator go required).
 - **Fresh reset endgame** — reset packages, recreate the repos as fresh public repositories with pristine commit history, each starting at tag `v0.1.0` with a matching release package (operator decision 2026-10-15; current private history is scaffolding).
 - **Release creator attribution** — evaluate a fine-grained PAT so releases stop showing `github-actions[bot]` as creator (operator rejected the bot attribution; decision pending on the trade-off).
