@@ -56,6 +56,15 @@ jobs:
         shell: bash
         run: |
           TAG="${{ inputs.tag }}"
+          BODY="$(awk -v t="## ${TAG}" '$0==t{f=1;next} f&&/^## /{exit} f' CHANGELOG.md || true)"
+          if [ -z "$BODY" ]; then
+            echo "NO_CHANGELOG_SECTION: CHANGELOG.md must contain a '## ${TAG}' section at the tagged commit (deliberate: no silent releases)" >&2
+            exit 1
+          fi
+          RESP=$(curl -sf -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${REPO}/releases" -d "$(jq -n --arg tag \"$TAG\" --arg body \"$BODY\" '{tag_name:$tag, name:$tag, body:$body}')")
+          REL_ID=$(echo "$RESP" | jq -r '.id')
+          if [ -z "$REL_ID" ] || [ "$REL_ID" = "null" ]; then echo "RELEASE_CREATE_FAILED: $(echo "$RESP" | head -c 400)" > /dev/stderr; exit 1; fi
+          cd "$TARGET_DIR"
           VERSION_CONTENT=$(git show HEAD:VERSION 2>/dev/null || echo "")
           VERSION=$(echo "$VERSION_CONTENT" | tr -d '[:space:]')
           TAG_NUM=${TAG#v}
@@ -104,6 +113,15 @@ jobs:
         shell: bash
         run: |
           TAG="${{ inputs.tag }}"
+          BODY="$(awk -v t="## ${TAG}" '$0==t{f=1;next} f&&/^## /{exit} f' CHANGELOG.md || true)"
+          if [ -z "$BODY" ]; then
+            echo "NO_CHANGELOG_SECTION: CHANGELOG.md must contain a '## ${TAG}' section at the tagged commit (deliberate: no silent releases)" >&2
+            exit 1
+          fi
+          RESP=$(curl -sf -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${REPO}/releases" -d "$(jq -n --arg tag \"$TAG\" --arg body \"$BODY\" '{tag_name:$tag, name:$tag, body:$body}')")
+          REL_ID=$(echo "$RESP" | jq -r '.id')
+          if [ -z "$REL_ID" ] || [ "$REL_ID" = "null" ]; then echo "RELEASE_CREATE_FAILED: $(echo "$RESP" | head -c 400)" > /dev/stderr; exit 1; fi
+          cd "$TARGET_DIR"
           REPO=$(git remote get-url --push origin | sed -E -e 's|\.git/?$||' -e 's|.*github\.com[/:]([^/]+)/([^/]+)/?$|\1/\2|')
           REF=$(curl -sf -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${REPO}/git/ref/tags/${TAG}")
           OBJECT_SHA=$(echo "$REF" | jq -r '.object.sha')
@@ -150,6 +168,15 @@ jobs:
         run: |
           TARGET_DIR=$(mktemp -d)
           TAG="${{ inputs.tag }}"
+          BODY="$(awk -v t="## ${TAG}" '$0==t{f=1;next} f&&/^## /{exit} f' CHANGELOG.md || true)"
+          if [ -z "$BODY" ]; then
+            echo "NO_CHANGELOG_SECTION: CHANGELOG.md must contain a '## ${TAG}' section at the tagged commit (deliberate: no silent releases)" >&2
+            exit 1
+          fi
+          RESP=$(curl -sf -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${REPO}/releases" -d "$(jq -n --arg tag \"$TAG\" --arg body \"$BODY\" '{tag_name:$tag, name:$tag, body:$body}')")
+          REL_ID=$(echo "$RESP" | jq -r '.id')
+          if [ -z "$REL_ID" ] || [ "$REL_ID" = "null" ]; then echo "RELEASE_CREATE_FAILED: $(echo "$RESP" | head -c 400)" > /dev/stderr; exit 1; fi
+          cd "$TARGET_DIR"
           echo "TARGET_DIR=$TARGET_DIR" >> "$GITHUB_ENV"
           if [ -n "${{ inputs.release_artifact_path }}" ]; then
             shopt -s globstar dotglob
@@ -174,6 +201,15 @@ jobs:
         shell: bash
         run: |
           TAG="${{ inputs.tag }}"
+          BODY="$(awk -v t="## ${TAG}" '$0==t{f=1;next} f&&/^## /{exit} f' CHANGELOG.md || true)"
+          if [ -z "$BODY" ]; then
+            echo "NO_CHANGELOG_SECTION: CHANGELOG.md must contain a '## ${TAG}' section at the tagged commit (deliberate: no silent releases)" >&2
+            exit 1
+          fi
+          RESP=$(curl -sf -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${REPO}/releases" -d "$(jq -n --arg tag \"$TAG\" --arg body \"$BODY\" '{tag_name:$tag, name:$tag, body:$body}')")
+          REL_ID=$(echo "$RESP" | jq -r '.id')
+          if [ -z "$REL_ID" ] || [ "$REL_ID" = "null" ]; then echo "RELEASE_CREATE_FAILED: $(echo "$RESP" | head -c 400)" > /dev/stderr; exit 1; fi
+          cd "$TARGET_DIR"
           cd "$TARGET_DIR"
           upload_asset() {
             local FILE="$1" NAME
@@ -184,14 +220,6 @@ jobs:
             fi
             curl -sf -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' -H 'Content-Type: application/octet-stream' --data-binary "@${FILE}" "https://uploads.github.com/repos/${REPO}/releases/${REL_ID}/assets?name=${NAME}"
           }
-                    BODY="$(awk -v t="## ${TAG}" '$0==t{f=1;next} f&&/^## /{exit} f' CHANGELOG.md || true)"
-          if [ -z "$BODY" ]; then
-            echo "NO_CHANGELOG_SECTION: CHANGELOG.md must contain a '## ${TAG}' section at the tagged commit (deliberate: no silent releases)" >&2
-            exit 1
-          fi
-          RESP=$(curl -sf -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${REPO}/releases" -d "$(jq -n --arg tag \"$TAG\" --arg body \"$BODY\" '{tag_name:$tag, name:$tag, body:$body}')")
-          REL_ID=$(echo "$RESP" | jq -r '.id')
-          if [ -z "$REL_ID" ] || [ "$REL_ID" = "null" ]; then echo "RELEASE_CREATE_FAILED: $(echo "$RESP" | head -c 400)" > /dev/stderr; exit 1; fi
           find . -type f | sed 's|^\.\./||' | while read -r f; do upload_asset "$TARGET_DIR/$f"; done
           upload_asset "$RUNNER_TEMP/SHA256SUMS"
           echo "RELEASE_ID=${REL_ID}"
