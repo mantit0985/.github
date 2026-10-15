@@ -70,7 +70,7 @@ jobs:
         run: |
           TAG_COMMIT=$(git rev-parse HEAD)
           REPO=$(git remote get-url --push origin | sed -E -e 's|\.git/?$||' -e 's|.*github\.com[/:]([^/]+)/([^/]+)/?$|\1/\2|')
-          MAIN_COMMIT=$(gh api repos/${REPO}/commits/main --jq '.sha')
+          MAIN_COMMIT=$(curl -sf -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${REPO}/commits/main" | jq -r '.sha')
           if [ "$TAG_COMMIT" != "$MAIN_COMMIT" ]; then
             echo "FAIL[2]: Tag commit $TAG_COMMIT not equal to main tip $MAIN_COMMIT" >&2
             exit 1
@@ -82,7 +82,7 @@ jobs:
         run: |
           TAG_COMMIT=$(git rev-parse HEAD)
           REPO=$(git remote get-url --push origin | sed -E -e 's|\.git/?$||' -e 's|.*github\.com[/:]([^/]+)/([^/]+)/?$|\1/\2|')
-          CI_CONCLUSION=$(gh api repos/${REPO}/actions/runs?head_sha=${TAG_COMMIT} |
+          CI_CONCLUSION=$(curl -sf -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${REPO}/actions/runs?head_sha=${TAG_COMMIT}" |
             jq -r '.workflow_runs[] | select(.name=="CI") | .conclusion' | head -n1)
           if [ -z "$CI_CONCLUSION" ]; then
             echo "FAIL[3]: No CI run found for commit $TAG_COMMIT" >&2
@@ -100,7 +100,7 @@ jobs:
           TAG="${{ inputs.tag }}"
           mkdir -p -m 700 "$RUNNER_TEMP/gnupg"
           export GNUPGHOME="$RUNNER_TEMP/gnupg"
-          gh api users/mantit0985/gpg_keys --jq '.[0].raw_key' | gpg --import
+          curl -sf -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/users/mantit0985/gpg_keys" | jq -r '.[0].raw_key' | gpg --import
           if ! git verify-tag "refs/tags/$TAG" > /dev/null 2>&1; then
             echo "FAIL[4]: Tag $TAG failed GPG verification" >&2
             exit 1
@@ -118,6 +118,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: refs/tags/${{ inputs.tag }}
+
+      - name: Resolve repo slug
+        shell: bash
+        run: |
+          REPO=$(git remote get-url --push origin | sed -E -e 's|\.git/?$||' -e 's|.*github\.com[/:]([^/]+)/([^/]+)/?$|\1/\2|')
+          echo "REPO=$REPO" >> "$GITHUB_ENV"
 
       - name: Run release command if specified
         if: ${{ inputs.release_cmd != '' }}
@@ -142,22 +148,29 @@ jobs:
       - name: Check for existing release
         shell: bash
         run: |
-          if gh release view "${{ inputs.tag }}" >/dev/null 2>&1; then
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${REPO}/releases/tags/${{ inputs.tag }}")
+          if [ "$STATUS" = "200" ]; then
             echo "RELEASE_EXISTS: Release ${{ inputs.tag }} already exists" >&2
             exit 1
           fi
 
-      - name: Create release
+      - name: Create release and upload assets
         shell: bash
         run: |
+          TAG="${{ inputs.tag }}"
           cd "$TARGET_DIR"
-          gh release create "${{ inputs.tag }}" --verify-tag \
-            --title "${{ inputs.tag }}" \
-            --notes "Release of commit $(git rev-parse HEAD)" \
-            $(find . -type f | sed 's|^\./||')
-
-      - name: Upload SHA256SUMS
-        shell: bash
-        run: |
-          gh release upload "${{ inputs.tag }}" "$RUNNER_TEMP/SHA256SUMS" --clobber
-
+          upload_asset() {
+            local FILE="$1" NAME
+            NAME=$(basename "$FILE")
+            ASSET_ID=$(curl -sf -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${REPO}/releases/${REL_ID}/assets" | jq -r --arg n "$NAME" '[.[] | select(.name==$n)][0].id // empty')
+            if [ -n "$ASSET_ID" ]; then
+              curl -sf -X DELETE -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${REPO}/assets/${ASSET_ID}"
+            fi
+            curl -sf -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' -H 'Content-Type: application/octet-stream' --data-binary "@${FILE}" "https://uploads.github.com/repos/${REPO}/releases/${REL_ID}/assets?name=${NAME}"
+          }
+          RESP=$(curl -sf -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${REPO}/releases" -d "{ \"tag_name\": \"${TAG}\", \"name\": \"${TAG}\", \"body\": \"Release of commit $(git rev-parse HEAD)\" }")
+          REL_ID=$(echo "$RESP" | jq -r '.id')
+          if [ -z "$REL_ID" ] || [ "$REL_ID" = "null" ]; then echo "RELEASE_CREATE_FAILED: $(echo "$RESP" | head -c 400)" > /dev/stderr; exit 1; fi
+          find . -type f | sed 's|^\.\./||' | while read -r f; do upload_asset "$TARGET_DIR/$f"; done
+          upload_asset "$RUNNER_TEMP/SHA256SUMS"
+          echo "RELEASE_ID=${REL_ID}"
