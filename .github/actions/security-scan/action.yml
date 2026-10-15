@@ -1,5 +1,5 @@
 name: 'Security Scan'
-description: 'Standardized SAST (Semgrep) and SCA (Trivy) scan sequence for the fleet'
+description: 'Standardized SAST (Semgrep) and SCA (Trivy) scan sequence for template repositories'
 inputs:
   semgrep_config:
     description: 'Semgrep config to use (e.g., p/rust)'

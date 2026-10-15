@@ -31,7 +31,7 @@ Repositories may override these defaults by providing their own versions in thei
 
 All template repositories must adhere to the centralized governance model defined in this hub:
 
-- **Workflow Centralization**: All CI/CD logic must be delegated to the hub's reusable workflows (`fleet-ci.yml` and `fleet-cd.yml`).
+- **Workflow Centralization**: All CI/CD logic must be delegated to the hub's reusable workflows (`ci.yml` and `cd.yml`).
 - **Thin Wrappers**: Template `.github/workflows/` files must contain only triggers and the call to the hub.
 - **Symmetry Contract**: Exactly one CI and one CD run per trigger, with CD strictly gated by CI success.
 - **Runner Standard**: All workflows must run on `self-hosted` runners.

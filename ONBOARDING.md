@@ -1,6 +1,6 @@
-# Fleet Onboarding Guide
+# Onboarding Guide
 
-This guide describes how to integrate a new template repository into the `mantit0985` fleet while adhering to the **Gold Standard** and the **Symmetry Contract**.
+This guide describes how to integrate a new template repository into the `mantit0985` template estate while adhering to the **Gold Standard** and the **Symmetry Contract**.
 
 ## Quick Start
 
@@ -23,8 +23,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  fleet-ci:
-    uses: mantit0985/.github/.github/workflows/fleet-ci.yml@main
+  ci:
+    uses: mantit0985/.github/.github/workflows/ci.yml@main
     with:
       language: 'your-language' # e.g., 'rust', 'python', 'go', 'cpp', 'nodejs', 'zig'
       smoke-image: 'your-repo:slim'
@@ -48,10 +48,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  fleet-cd:
+  cd:
     # The Symmetry Contract: Only deploy if CI succeeded
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    uses: mantit0985/.github/.github/workflows/fleet-cd.yml@main
+    uses: mantit0985/.github/.github/workflows/cd.yml@main
     with:
       image_name: 'your-repo'
       # Optional: Enable if your repo requires strict API-based CI gating
@@ -62,7 +62,7 @@ jobs:
 ```
 
 ## The Symmetry Contract
-Every repository in the fleet MUST maintain exactly one CI run and one CD run per trigger.
+Every template repository MUST maintain exactly one CI run and one CD run per trigger.
 - **CI**: Handles quality, security, and smoke tests.
 - **CD**: Handles the multi-target build and push to GHCR.
 - **Gating**: CD must be strictly gated by CI success.

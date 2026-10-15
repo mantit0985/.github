@@ -1,21 +1,21 @@
-# .github - Fleet Control Plane
+# .github - Control Plane
 
 ![Heartbeat](https://github.com/mantit0985/.github/actions/workflows/runner-heartbeat.yml/badge.svg)
 ![Validator](https://github.com/mantit0985/.github/actions/workflows/pr-validator.yml/badge.svg)
 ![License](https://img.shields.io/github/license/mantit0985/.github)
 
-This repository serves as the centralized governance and orchestration hub for the `mantit0985` template fleet. It defines the "Gold Standard" for CI/CD, security scanning, and deployment across all template repositories.
+This repository serves as the centralized governance and orchestration hub for the `mantit0985` template estate. It defines the "Gold Standard" for CI/CD, security scanning, and deployment across all template repositories.
 
 ### Governance & Standards
 - **Centralization**: All CI/CD logic is delegated to the hub to eliminate duplication and maintenance toil.
-- **Symmetry**: Enforces the "One CI + One CD" contract across the entire fleet.
+- **Symmetry**: Enforces the "One CI + One CD" contract across the entire template repositories.
 - **Execution**: Optimized for `self-hosted` runners to leverage local hardware and avoid credit consumption.
 
 ##  Infrastructure Components
 
 ### 1. Reusable Workflows (`.github/workflows/`)
 
-#### `fleet-ci.yml`
+#### `ci.yml`
 The standardized Continuous Integration pipeline.
 - **Pipeline**: `quality` $\rightarrow$ `build-verify` (optional) $\rightarrow$ `security` $\rightarrow$ `smoke`.
 - **Inputs**:
@@ -23,7 +23,7 @@ The standardized Continuous Integration pipeline.
     - `smoke-image` (Required): The container image for validation.
     - `build-verify-cmd` (Optional): Custom command to build the target image.
 
-#### `fleet-cd.yml`
+#### `cd.yml`
 The standardized Continuous Deployment pipeline.
 - **Pipeline**: `ci-gate` (optional) $\rightarrow$ `release` (optional) $\rightarrow$ `deploy`.
 - **Inputs**:
@@ -43,7 +43,7 @@ The standardized Continuous Deployment pipeline.
 | `pr-labeler` | PR Labeling | Automates PR categorization based on branch prefixes and file patterns. |
 
 ##  The Symmetry Contract
-To maintain operational stability, all fleet repositories must adhere to the **Symmetry Contract**:
+To maintain operational stability, all template repositories must adhere to the **Symmetry Contract**:
 - **Exactly one CI run** per trigger.
 - **Exactly one CD run** per trigger.
 - **Strict Gating**: CD must never execute unless the corresponding CI run has concluded with `success`.

@@ -1,5 +1,5 @@
 name: 'Smoke Test'
-description: 'Standardized health and observability probes for fleet containers'
+description: 'Standardized health and observability probes for template repository containers'
 inputs:
   image_name:
     description: 'Container image to test'
