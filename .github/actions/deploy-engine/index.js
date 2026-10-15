@@ -127,12 +127,10 @@ function materialize(env) {
     const dir = path.join(state.tempBase, 'envs', dep.project_name);
     fs.mkdirSync(dir, { mode: 0o700, recursive: true });
     for (const envf of dep.env_files) {
-      let content;
-      if (envf.source === 'generated') {
-        content = `ENGINE_GENERATED_SECRET=${crypto.randomBytes(32).toString('hex')}\n`;
-      } else {
-        content = fs.readFileSync(path.resolve(env.workspace, envf.source.slice(5)), 'utf8');
-      }
+      // file: sources remain as real files at their declared checkout path and are read
+      // in place by docker compose; only generated sources are materialized + symlinked.
+      if (envf.source !== 'generated') { continue; }
+      const content = `ENGINE_GENERATED_SECRET=${crypto.randomBytes(32).toString('hex')}\n`;
       const safeName = envf.path.split('/').join('__');
       const tmpFile = path.join(dir, safeName);
       fs.writeFileSync(tmpFile, content, { mode: 0o600 });
@@ -146,6 +144,7 @@ function placeSymlinks(env) {
   const wsReal = fs.realpathSync(env.workspace);
   for (const dep of state.deployments) {
     for (const envf of dep.env_files) {
+      if (!envf._tmpFile) { continue; } // only entries materialized by this run are symlinked
       const link = path.resolve(env.workspace, envf.path);
       let isSym = false;
       let exists = false;
