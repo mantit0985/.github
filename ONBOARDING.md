@@ -56,11 +56,12 @@ jobs:
       image_name: 'your-repo'
       # Optional: Enable if your repo requires strict API-based CI gating
       enable_ci_gate: false 
-NOTE: callers enabling `enable_ci_gate` must declare `actions: read` (with `contents: read`) in their wrapper workflow's permissions, because the ci-gate job queries the Actions API.
       # Optional: Specialized binary release command
       release_cmd: ''
       release_artifact_path: ''
 ```
+
+> **NOTE:** Callers enabling `enable_ci_gate` must declare `actions: read` (with `contents: read`) in their wrapper workflow's permissions — the ci-gate job queries the Actions API.
 
 ## The Symmetry Contract
 Every template repository MUST maintain exactly one CI run and one CD run per trigger.
