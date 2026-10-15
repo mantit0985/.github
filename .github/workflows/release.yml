@@ -82,8 +82,14 @@ jobs:
         run: |
           TAG_COMMIT=$(git rev-parse HEAD)
           REPO=$(git remote get-url --push origin | sed -E -e 's|\.git/?$||' -e 's|.*github\.com[/:]([^/]+)/([^/]+)/?$|\1/\2|')
-          CI_CONCLUSION=$(curl -sf -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${REPO}/actions/runs?head_sha=${TAG_COMMIT}" |
-            jq -r '.workflow_runs[] | select(.name=="CI") | .conclusion' | head -n1)
+          echo "DEBUG REPO=${REPO} TAG_COMMIT=${TAG_COMMIT}" >&2
+          API_URL="https://api.github.com/repos/${REPO}/actions/runs?head_sha=${TAG_COMMIT}"
+          HTTP_CODE=$(curl -s -o "$RUNNER_TEMP/ci_runs.json" -w '%{http_code}' -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "${API_URL}")
+          echo "DEBUG HTTP_CODE=${HTTP_CODE} URL=${API_URL}" >&2
+          head -c 300 "$RUNNER_TEMP/ci_runs.json" >&2; echo >&2
+          echo "DEBUG HEAD PRINT" >&2
+          CI_CONCLUSION=$(jq -r '[.workflow_runs[] | select(.name=="CI") | .conclusion][0] // empty' "$RUNNER_TEMP/ci_runs.json")
+          echo "DEBUG CI_CONCLUSION=${CI_CONCLUSION}" >&2
           if [ -z "$CI_CONCLUSION" ]; then
             echo "FAIL[3]: No CI run found for commit $TAG_COMMIT" >&2
             exit 1
@@ -93,7 +99,6 @@ jobs:
             exit 1
           fi
           echo "PASS[3] Latest CI run succeeded"
-
       - name: Verify GPG signed tag
         shell: bash
         run: |
