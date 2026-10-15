@@ -69,7 +69,7 @@ jobs:
         shell: bash
         run: |
           TAG_COMMIT=$(git rev-parse HEAD)
-          REPO=$(git remote get-url --push origin | sed -E 's|.*github.com/([^/]+)/([^/.]+)(\.git)?$|\1/\2|')
+          REPO=$(git remote get-url --push origin | sed -E 's|.*github\.com[/:]([^/]+)/([^/]+?)(\.git)?/?$|\1/\2|')
           MAIN_COMMIT=$(gh api repos/${REPO}/commits/main --jq '.sha')
           if [ "$TAG_COMMIT" != "$MAIN_COMMIT" ]; then
             echo "FAIL[2]: Tag commit $TAG_COMMIT not equal to main tip $MAIN_COMMIT" >&2
@@ -81,7 +81,7 @@ jobs:
         shell: bash
         run: |
           TAG_COMMIT=$(git rev-parse HEAD)
-          REPO=$(git remote get-url --push origin | sed -E 's|.*github.com/([^/]+)/([^/.]+)(\.git)?$|\1/\2|')
+          REPO=$(git remote get-url --push origin | sed -E 's|.*github\.com[/:]([^/]+)/([^/]+?)(\.git)?/?$|\1/\2|')
           CI_CONCLUSION=$(gh api repos/${REPO}/actions/runs?head_sha=${TAG_COMMIT} |
             jq -r '.workflow_runs[] | select(.name=="CI") | .conclusion' | head -n1)
           if [ -z "$CI_CONCLUSION" ]; then
