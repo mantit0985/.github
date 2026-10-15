@@ -104,14 +104,23 @@ jobs:
         shell: bash
         run: |
           TAG="${{ inputs.tag }}"
-          mkdir -p -m 700 "$RUNNER_TEMP/gnupg"
-          export GNUPGHOME="$RUNNER_TEMP/gnupg"
-          curl -sf -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/users/mantit0985/gpg_keys" | jq -r '.[0].raw_key' | gpg --import
-          if ! git verify-tag "refs/tags/$TAG" > /dev/null 2>&1; then
-            echo "FAIL[4]: Tag $TAG failed GPG verification" >&2
+          REPO=$(git remote get-url --push origin | sed -E -e 's|\.git/?$||' -e 's|.*github\.com[/:]([^/]+)/([^/]+)/?$|\1/\2|')
+          REF=$(curl -sf -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${REPO}/git/ref/tags/${TAG}")
+          OBJECT_SHA=$(echo "$REF" | jq -r '.object.sha')
+          OBJECT_TYPE=$(echo "$REF" | jq -r '.object.type')
+          if [ "$OBJECT_TYPE" != "tag" ]; then
+            echo "FAIL[4]: Tag $TAG is not an annotated tag (type=${OBJECT_TYPE})" >&2
             exit 1
           fi
-          echo "PASS[4] Tag is GPG signed"
+          TAGOBJ=$(curl -sf -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${REPO}/git/tags/${OBJECT_SHA}")
+          TAG_NAME=$(echo "$TAGOBJ" | jq -r '.tag')
+          VERIFIED=$(echo "$TAGOBJ" | jq -r '.verification.verified')
+          REASON=$(echo "$TAGOBJ" | jq -r '.verification.reason')
+          if [ "$TAG_NAME" != "$TAG" ] || [ "$VERIFIED" != "true" ] || [ "$REASON" != "valid" ]; then
+            echo "FAIL[4]: Tag $TAG failed API signature verification (verified=${VERIFIED} reason=${REASON})" >&2
+            exit 1
+          fi
+          echo "PASS[4] Tag signature verified via GitHub API"
 
   release:
     name: Publish Release
