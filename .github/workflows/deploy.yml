@@ -28,7 +28,7 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Run deploy engine
         id: engine
         uses: mantit0985/.github/.github/actions/deploy-engine@main

@@ -24,7 +24,7 @@ jobs:
   quality:
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Commit hygiene gate
         shell: bash
@@ -85,7 +85,7 @@ jobs:
 
       - name: Setup Python
         if: inputs.language == 'python'
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@v7
 
       - name: Python Checks
         if: inputs.language == 'python'
@@ -98,7 +98,7 @@ jobs:
 
       - name: Setup Go
         if: inputs.language == 'go'
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: '1.26'
 
@@ -112,7 +112,7 @@ jobs:
 
       - name: Go Lint
         if: inputs.language == 'go'
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v9
         with:
           working-directory: ${{ inputs.working-dir }}
 
@@ -128,7 +128,7 @@ jobs:
 
       - name: Setup pnpm
         if: inputs.language == 'nodejs'
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
         with:
           version: 9
 
@@ -162,7 +162,7 @@ jobs:
     needs: [quality]
     if: inputs.build-verify-cmd != ''
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build Verify
         run: ${{ inputs.build-verify-cmd }}
 
@@ -170,7 +170,7 @@ jobs:
     runs-on: self-hosted
     needs: [quality, build-verify]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Security Scan
         uses: mantit0985/.github/.github/actions/security-scan@main
         with:
@@ -181,7 +181,7 @@ jobs:
     runs-on: self-hosted
     needs: [security]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Smoke Test
         uses: mantit0985/.github/.github/actions/smoke-test@main
         with:
