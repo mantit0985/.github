@@ -38,6 +38,10 @@ All template repositories must adhere to the centralized governance model define
 
 Refer to `ONBOARDING.md` for implementation details.
 
+### Intra-fleet `@main` References
+
+Intra-fleet `@main` references — hub workflows calling this repository's actions, and template wrappers calling the hub's reusable workflows — are **deliberate** under the canary-first rollout: changes are proven in `mantit0985/.github-testing` before they reach consumers. SHA-pinning of these references is deferred to the fresh-reset/release decision.
+
 ## Release Versioning
 
 All repositories version with Semantic Versioning (`MAJOR.MINOR.PATCH`), tagged `vX.Y.Z` and released through the signed-tag flow.

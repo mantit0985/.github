@@ -5,6 +5,8 @@ const os = require('os');
 const { spawnSync } = require('child_process');
 const crypto = require('crypto');
 
+const ENGINE_VERSION = '0.1.0';
+
 class EngineError extends Error {}
 
 const state = {
@@ -297,6 +299,7 @@ function teardown(env, failed) {
 }
 
 async function run() {
+  console.log('[deploy-engine] ' + ENGINE_VERSION);
   const env = {
     workspace: process.env.GITHUB_WORKSPACE,
     manifest: process.env.INPUT_MANIFEST_PATH || 'deploy/deployments.json',

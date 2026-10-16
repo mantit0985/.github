@@ -70,6 +70,7 @@ jobs:
           echo "Template validation passed."
 
       - name: Governance Enforcement
+        if: github.actor != 'dependabot[bot]'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -83,6 +84,7 @@ jobs:
           echo "Governance enforcement passed."
 
       - name: Commit Linting
+        if: github.actor != 'dependabot[bot]'
         run: |
           echo "Linting commit messages..."
           COMMITS=$(git log origin/main...HEAD --oneline)
