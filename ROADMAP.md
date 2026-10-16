@@ -4,12 +4,7 @@ Fleet control-plane roadmap. Landed work moves to the **Delivered** section with
 
 ## In progress
 
-### Deployment engine (v0.1.0) — Node.js action `.github/actions/deploy-engine` + reusable `deploy.yml` + `deploy/deployments.json`
-- Architecture (operator decision 2026-10-15): the engine is a Node.js (stdlib-only, node24) GitHub ACTION at `.github/actions/deploy-engine`; a thin reusable `.github/workflows/deploy.yml` is the fleet entry point.
-- Data-driven pipeline: a JSON manifest in the consuming repo declares deployments; the engine parses it natively (no jq) and executes.
-- Manifest schema v1: `name`, `platform` (`docker` in v1), `context` (socket | ssh), `compose_file`, `project_name`, `env_files` with sources `secret:<NAME>` | `generated` | `file:<path>`, `healthcheck` (url/retries/interval).
-- Engine behavior: validate manifest (structured errors, unknown platform = loud refusal) → materialize env files (600-perm temp files, secret values masked via add-mask, never echoed, cleaned up) → `docker compose -p <project> up -d --build` on the declared context (socket | ssh) → health probe → teardown, with a defensive `always()` bash step for crashed-node cleanup.
-- Proving ground: the canary `mantit0985/.github-testing` compose stack (`compose.yaml` + `compose.override.yaml`).
+- _None._
 
 ## Next
 
@@ -20,7 +15,9 @@ Fleet control-plane roadmap. Landed work moves to the **Delivered** section with
 - **Release creator attribution** — evaluate a fine-grained PAT so releases stop showing `github-actions[bot]` as creator (operator rejected the bot attribution; decision pending on the trade-off).
 - **github-actions-runner repo: reusable-workflow adoption** — implement the hub reusable workflows for the `mantit0985/github-actions-runner` repo (bespoke `CI.yml`/`CD.yml` reworked toward the fleet reusable pattern), EXCLUDING the deploy workflow.
 
-## Delivered (2026-10-15)
+## Delivered (2026-10-15 - 2026-10-16)
+
+- **Deployment engine v0.1.0, proven end-to-end on the canary** — Node action `.github/actions/deploy-engine` + reusable `deploy.yml`, manifest-driven compose stacks: validation refusal matrix, env materialization (`generated` materialized+symlinked, `file:` read in place), digest-pinned netns healthcheck probe, structured `-nomad` refusal proven, try/finally teardown + defensive `always()` cleanup. Fleet enablers: runner image rebuilt with the compose plugin (`mantit0985/github-actions-runner` CD) and itemized removal of 29 empty compose networks (address-pool exhaustion). Proof runs on `mantit0985/.github-testing`: 38828634951 (positive, green), 38828807704 (negative `nomad` refusal, zero side effects), 38828903478 (post-revert green re-run; stack running, healthz 200).
 
 - **Release trigger, end-to-end on the canary** — pre-push gate with 4 assertions (tag==VERSION, tag==main tip, CI green, valid signature), server-side recheck in the reusable `release.yml`, changelog-sourced release bodies, slug-safe source tarball + `SHA256SUMS`, locally detached GPG signature, and the publish helper `.github/hooks/release-publish.sh` (proven at v0.1.2 and fully at v0.1.3).
 - **ci-gate contracts** — callers enabling `enable_ci_gate` grant `actions: read` in their wrapper permissions; reusable `cd.yml` carries no job-level permissions (caller startup-failure lesson).
