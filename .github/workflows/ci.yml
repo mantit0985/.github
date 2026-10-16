@@ -26,6 +26,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Commit hygiene gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          pattern='Co-Authored-By: Claude|Generated with Claude Code|🤖 Generated with'
+          before="${{ github.event.before }}"
+          zero="0000000000000000000000000000000000000000"
+          msgs=$(mktemp)
+          if [ -n "$before" ] && [ "$before" != "$zero" ]; then
+            if ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+              git fetch --no-tags --filter=blob:none origin "$before" \
+                || git fetch --no-tags --deepen=50 origin || true
+            fi
+            if git cat-file -e "$before^{commit}" 2>/dev/null; then
+              git log "$before"..HEAD --format=%B > "$msgs"
+            else
+              echo "::warning::could not resolve github.event.before ($before) in this checkout; checking HEAD commit only"
+              git log -1 --format=%B > "$msgs"
+            fi
+          else
+            git log -1 --format=%B > "$msgs"
+          fi
+          if grep -nE "$pattern" "$msgs"; then
+            echo "ERROR: AI attribution lines are not allowed in commits."
+            exit 1
+          fi
+
       - name: Setup Rust
         if: inputs.language == 'rust'
         uses: dtolnay/rust-toolchain@stable
