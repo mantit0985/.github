@@ -42,6 +42,10 @@ Refer to `ONBOARDING.md` for implementation details.
 
 Intra-fleet `@main` references — hub workflows calling this repository's actions, and template wrappers calling the hub's reusable workflows — are **deliberate** under the canary-first rollout: changes are proven in `mantit0985/.github-testing` before they reach consumers. SHA-pinning of these references is deferred to the fresh-reset/release decision.
 
+### Fleet Commit-Message Guard
+
+Spawned and template repos ship `.githooks/commit-msg` (the fleet commit-msg guard) plus a root `Makefile` whose default target installs hooks via `git config core.hooksPath .githooks` (this hub's Makefile installs the same guard from `.github/hooks`). AI attribution in commit messages is forbidden fleet-wide.
+
 ## Release Versioning
 
 All repositories version with Semantic Versioning (`MAJOR.MINOR.PATCH`), tagged `vX.Y.Z` and released through the signed-tag flow.
