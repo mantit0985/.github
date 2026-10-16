@@ -2,7 +2,6 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const http = require('http');
 const { spawnSync } = require('child_process');
 const crypto = require('crypto');
 
@@ -15,6 +14,13 @@ const state = {
   knownHostsPath: null,
   knownHostAdded: []
 };
+
+// Healthcheck probe image, pinned by digest (manifest-list digest; pulled and verified on the
+// runner host and the gate host at build time). The probe is a disposable `docker run --rm`
+// container attached to the deployed container's network namespace, so the manifest healthcheck
+// URL keeps its exact documented meaning of loopback-inside-the-stack. --rm keeps the probe
+// self-disposing; the defensive always() workflow step is the cleanup backstop.
+const PROBE_IMAGE = 'busybox@sha256:fd7dc98638c8e305f4dc34e979f1c0fdfdcaeb0fbf8fcff77ae834b6da3d7e6e';
 
 function emitError(msg) { console.error('::error::' + msg); }
 function fail(msg) { throw new EngineError(msg); }
@@ -102,6 +108,7 @@ function validate(env) {
         if (typeof hc.url !== 'string' || hc.url === '') errors.push(`Deployment '${dep.name}' healthcheck url missing`);
         if (!Number.isInteger(hc.retries) || hc.retries <= 0) errors.push(`Deployment '${dep.name}' healthcheck retries must be a positive integer`);
         if (!Number.isInteger(hc.interval_seconds) || hc.interval_seconds <= 0) errors.push(`Deployment '${dep.name}' healthcheck interval_seconds must be a positive integer`);
+        if (hc.service !== undefined && (typeof hc.service !== 'string' || hc.service === '')) errors.push(`Deployment '${dep.name}' healthcheck.service must be a non-empty string when present`);
       }
     }
   }
@@ -210,27 +217,29 @@ function deploy(dep, env) {
   dep.reachedDeploy = true;
 }
 
-function httpAttempt(url) {
-  return new Promise((resolve) => {
-    let settled = false;
-    const done = (ok) => { if (!settled) { settled = true; resolve(ok); } };
-    try {
-      const req = http.get(url, { timeout: 5000 }, (res) => {
-        const ok = res.statusCode >= 200 && res.statusCode < 300;
-        res.resume();
-        res.on('end', () => done(ok));
-        res.on('error', () => done(false));
-      });
-      req.on('timeout', () => { req.destroy(); done(false); });
-      req.on('error', () => done(false));
-    } catch (e) { done(false); }
-  });
+function resolveProbeTarget(dep, env) {
+  const hc = dep.healthcheck;
+  const args = ['compose', '-f', dep.composeFile, '-p', dep.project_name, 'ps', '-q'];
+  if (hc.service) args.push(hc.service);
+  const res = spawnSync('docker', args, { cwd: env.workspace, encoding: 'utf8', env: sshChildEnv(dep) });
+  if (res.status !== 0 || res.error) fail(`docker compose ps failed for '${dep.name}' (exit ${res.status}): ${String(res.stderr).trim()}`);
+  return res.stdout.split('\n').map(l => l.trim()).filter(Boolean);
 }
 
-async function healthcheck(dep) {
+function healthcheck(dep, env) {
   const hc = dep.healthcheck;
+  const ids = resolveProbeTarget(dep, env);
+  if (ids.length !== 1) {
+    const detail = ids.length === 0
+      ? `no live containers found for compose project '${dep.project_name}' (healthcheck target unresolved)`
+      : `healthcheck target ambiguous for '${dep.name}': ${ids.length} containers live in project '${dep.project_name}'${hc.service ? ` (service '${hc.service}')` : ''}; add an optional 'healthcheck.service' to the manifest or deploy a single service`;
+    fail(detail);
+  }
+  const target = ids[0];
+  console.log(`[deploy-engine] healthcheck probe: docker run --rm --network container:${target} ${PROBE_IMAGE} wget -q -T 5 -O /dev/null ${hc.url}`);
   for (let attempt = 1; attempt <= hc.retries; attempt++) {
-    const ok = await httpAttempt(hc.url);
+    const res = spawnSync('docker', ['run', '--rm', '--network', `container:${target}`, PROBE_IMAGE, 'wget', '-q', '-T', '5', '-O', '/dev/null', hc.url], { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8', env: sshChildEnv(dep) });
+    const ok = res.status === 0 && !res.error;
     console.log(`[deploy-engine] healthcheck attempt ${attempt}/${hc.retries} for '${dep.name}': ${ok ? 'ok' : 'fail'}`);
     if (ok) { console.log('[deploy-engine] healthcheck passed'); return; }
     if (attempt < hc.retries) spawnSync('sleep', [String(hc.interval_seconds)], { stdio: 'ignore' });
@@ -310,7 +319,7 @@ async function run() {
     for (const dep of state.deployments) {
       if (dep.context.type === 'ssh') setupSsh(dep, env);
       deploy(dep, env);
-      await healthcheck(dep);
+      healthcheck(dep, env);
     }
     console.log('[deploy-engine] all deployments succeeded; stack left running');
   } catch (e) {
