@@ -1,0 +1,77 @@
+name: 'Smoke Test'
+description: 'Standardized health and observability probes for template repository containers'
+inputs:
+  image_name:
+    description: 'Container image to test'
+    required: true
+  port:
+    description: 'Port to expose'
+    required: false
+    default: '8080'
+  env_vars:
+    description: 'Environment variables passed as a space-separated list (e.g., "VAR1=val1 VAR2=val2")'
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set Smoke container name
+      shell: bash
+      run: |
+        SMOKE_CONTAINER_NAME="smoke-$(printf '%s' "${{ inputs.image_name }}" | tr '/:' '--')-$$"
+        echo "SMOKE_CONTAINER_NAME=$SMOKE_CONTAINER_NAME" >> "$GITHUB_ENV"
+
+    - name: Run Container
+      shell: bash
+      run: |
+        docker rm -f "$SMOKE_CONTAINER_NAME" >/dev/null 2>&1 || true
+        docker run -d --name "$SMOKE_CONTAINER_NAME" -p 127.0.0.1::${{ inputs.port }} ${{ inputs.env_vars }} ${{ inputs.image_name }}
+
+        # Join the smoke container to the runner's own docker network. The
+        # runner containers sit on compose networks (e.g. 192.168.208.0/20),
+        # while `docker run` lands the container on the daemon default bridge
+        # (172.17.0.0/16); cross-bridge traffic to docker0 is blocked on some
+        # hosts, so probing via the bridge IP hangs until failure. Probing the
+        # container over the runner's network is intra-bridge and reliable. If
+        # this is not a dockerized runner, fall through to the default-bridge
+        # probe below.
+        SMOKE_NETWORK=$(docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}' "$HOSTNAME" 2>/dev/null || true)
+        if [ -n "$SMOKE_NETWORK" ]; then
+          docker network connect "$SMOKE_NETWORK" "$SMOKE_CONTAINER_NAME" >/dev/null 2>&1 || true
+          echo "SMOKE_NETWORK=$SMOKE_NETWORK" >> "$GITHUB_ENV"
+        fi
+
+    - name: Probe Endpoints
+      shell: bash
+      run: |
+        SMOKETEST_IP=""
+        if [ -n "${SMOKE_NETWORK:-}" ]; then
+          SMOKETEST_IP=$(docker inspect "$SMOKE_CONTAINER_NAME" | jq -r --arg n "$SMOKE_NETWORK" '.[0].NetworkSettings.Networks[$n].IPAddress // empty')
+        fi
+        if [ -z "$SMOKETEST_IP" ]; then
+          SMOKETEST_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$SMOKE_CONTAINER_NAME")
+        fi
+
+        echo "Probing endpoints at http://${SMOKETEST_IP}:${{ inputs.port }}"
+
+        for i in $(seq 1 30); do
+          if curl -sf --connect-timeout 2 --max-time 3 "http://${SMOKETEST_IP}:${{ inputs.port }}/healthz" > /dev/null; then
+            echo "Container became healthy after $i seconds"
+            break
+          fi
+          docker logs "$SMOKE_CONTAINER_NAME" 2>&1 | tail -5
+          sleep 1
+        done
+
+        curl -f -m 5 "http://${SMOKETEST_IP}:${{ inputs.port }}/healthz"
+        curl -f -m 5 "http://${SMOKETEST_IP}:${{ inputs.port }}/readyz"
+        curl -f -m 5 "http://${SMOKETEST_IP}:${{ inputs.port }}/metrics"
+        curl -f -m 5 "http://${SMOKETEST_IP}:${{ inputs.port }}/version"
+
+    - name: Cleanup
+      shell: bash
+      run: |
+        docker stop "$SMOKE_CONTAINER_NAME" >/dev/null 2>&1 || true
+        docker rm -f "$SMOKE_CONTAINER_NAME" >/dev/null 2>&1 || true
+      if: always()

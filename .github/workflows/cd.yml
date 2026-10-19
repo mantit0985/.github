@@ -1,0 +1,109 @@
+on:
+  workflow_call:
+    inputs:
+      enable_ci_gate:
+        default: false
+        required: false
+        type: boolean
+      image_name:
+        required: true
+        type: string
+      release_artifact_path:
+        default: ''
+        required: false
+        type: string
+      release_cmd:
+        default: ''
+        required: false
+        type: string
+      tag:
+        default: ''
+        required: false
+        type: string
+      working-dir:
+        required: false
+        type: string
+        default: '.'
+jobs:
+  ci-gate:
+    if: ${{ inputs.enable_ci_gate }}
+    name: CI Quality Gate
+    runs-on: self-hosted
+    steps:
+    - env:
+        GH_TOKEN: ${{ github.token }}
+      name: Block until CI passes for this commit
+      run: "set -euo pipefail\nSHA='${{ github.sha }}'\nAPI='https://api.github.com/repos/${{\
+        \ github.repository }}/actions/runs?head_sha='\"${SHA}\"\n\nlatest_ci() {\n\
+        \  curl -sf \\\n    -H \"Authorization: Bearer ${GH_TOKEN}\" \\\n    -H 'Accept:\
+        \ application/vnd.github+json' \\\n    \"${API}\" | jq -c '[.workflow_runs[]?\
+        \ | select(.name == \"CI\")][0] // null'\n}\n\n# Wait (grace period) for a\
+        \ CI run for this exact commit to appear.\nattempt=0\nwhile :; do\n  RUN=$(latest_ci\
+        \ || echo null)\n  if [ \"${RUN}\" != 'null' ]; then\n    break\n  fi\n  attempt=$((attempt\
+        \ + 1))\n  if [ \"${attempt}\" -gt 10 ]; then\n    echo \"::error::No CI run\
+        \ exists for commit ${SHA}; CD is blocked (CI must pass before CD).\"\n  \
+        \  exit 1\n  fi\n  echo \"Waiting for CI run on commit ${SHA} (attempt ${attempt}/10)...\"\
+        \n  sleep 15\ndone\n\n# Wait for that CI run to complete.\nattempt=0\nwhile\
+        \ :; do\n  RUN=$(latest_ci || echo null)\n  STATUS=$(printf '%s' \"${RUN}\"\
+        \ | jq -r '.status')\n  CONCLUSION=$(printf '%s' \"${RUN}\" | jq -r '.conclusion\
+        \ // empty')\n  RUN_ID=$(printf '%s' \"${RUN}\" | jq -r '.id // \"unknown\"\
+        ')\n  echo \"CI run ${RUN_ID}: status=${STATUS} conclusion=${CONCLUSION}\"\
+        \n  if [ \"${STATUS}\" = 'completed' ]; then\n    if [ \"${CONCLUSION}\" =\
+        \ 'success' ]; then\n      echo \"CI quality gate passed for commit ${SHA}.\"\
+        \n      exit 0\n    fi\n    echo \"::error::CI concluded with '${CONCLUSION}'\
+        \ for commit ${SHA}; CD is blocked.\"\n    exit 1\n  fi\n  attempt=$((attempt\
+        \ + 1))\n  if [ \"${attempt}\" -gt 40 ]; then\n    echo \"::error::Timed out\
+        \ waiting for CI on commit ${SHA}; CD is blocked.\"\n    exit 1\n  fi\n  sleep\
+        \ 30\ndone\n"
+  deploy:
+    if: ${{ !cancelled() && !failure() }}
+    name: Container Deploy
+    needs:
+    - ci-gate
+    - release
+    permissions:
+      contents: read
+      packages: write
+    runs-on: self-hosted
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.tag != '' && inputs.tag || github.sha }}
+    - name: Commit hygiene gate
+      uses: mantit0985/.github/.github/actions/commit-hygiene-gate@main
+      with:
+        head: ${{ inputs.tag != '' && inputs.tag || github.sha }}
+    - name: Container Deploy
+      uses: mantit0985/.github/.github/actions/container-deploy@main
+      with:
+        image_name: ${{ inputs.image_name }}
+        registry_token: ${{ secrets.GITHUB_TOKEN }}
+        tag: ${{ inputs.tag != '' && inputs.tag || github.sha }}
+        target: ${{ matrix.target }}
+        context: ${{ inputs.working-dir }}
+    strategy:
+      matrix:
+        target:
+        - runtime-slim
+        - runtime-alpine
+        - runtime-distroless
+  release:
+    if: ${{ inputs.release_cmd != '' }}
+    name: Specialized Release
+    runs-on: self-hosted
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.tag != '' && inputs.tag || github.sha }}
+    - name: Commit hygiene gate
+      uses: mantit0985/.github/.github/actions/commit-hygiene-gate@main
+      with:
+        head: ${{ inputs.tag }}
+    - name: Run Release Command
+      run: ${{ inputs.release_cmd }}
+    - if: ${{ inputs.release_artifact_path != '' }}
+      name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-artifact
+        path: ${{ inputs.release_artifact_path }}

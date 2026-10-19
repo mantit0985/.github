@@ -1,0 +1,32 @@
+# Standard account-level .gitignore template
+# Copy into new repositories and extend as needed.
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# ---- Logs / temp ----
+*.log
+*.tmp
+tmp/
+
+# ---- Secrets ----
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+
+# ---- Build artifacts ----
+dist/
+build/
+*.egg-info/
+__pycache__/
+node_modules/

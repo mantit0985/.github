@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: self-hosted
+    steps:
+      - name: Check out the baseline
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Lint documentation
+        run: npx --yes markdownlint-cli@0.44.0 "**/*.md"
+      - name: Validate workflow YAML
+        run: |
+          set -e
+          errors=0
+          for f in .github/workflows/*.yml $(find .github/actions -name action.yml 2>/dev/null || true); do
+            [ -f "$f" ] || continue
+            npx --yes js-yaml@4.1.0 "$f" > /dev/null 2>&1 || { echo "INVALID YAML: $f"; errors=1; }
+          done
+          test "$errors" -eq 0 && echo 'validated workflow YAML'

@@ -1,0 +1,57 @@
+name: Sync from Hub
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Daily at midnight
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Current Repo
+        uses: actions/checkout@v4
+
+      - name: Clone Hub Repo
+        run: |
+          git clone --depth 1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/mantit0985/.github /tmp/hub-repo
+
+      - name: Compare and Sync Files
+        run: |
+          # Files to keep in sync
+          FILES=(".github/PULL_REQUEST_TEMPLATE.md" ".github/label-config.yml")
+          for FILE in "${FILES[@]}"; do
+            HUB_FILE="/tmp/hub-repo/$FILE"
+            LOCAL_FILE="$FILE"
+            if [ ! -f "$HUB_FILE" ]; then
+              echo "File $FILE not found in hub, skipping."
+              continue
+            fi
+            # Check for difference
+            if ! cmp -s "$HUB_FILE" "$LOCAL_FILE"; then
+              echo "Difference detected in $FILE"
+              # Create a sync branch
+              BRANCH="hub-sync/update-$(basename $FILE)-$(date +%s)"
+              git checkout -b "$BRANCH"
+              # Copy file from hub
+              mkdir -p "$(dirname "$LOCAL_FILE")"
+              cp "$HUB_FILE" "$LOCAL_FILE"
+              # Commit and push
+              git add "$LOCAL_FILE"
+              git commit -m "hub-sync: update $FILE from hub"
+              git push origin "$BRANCH"
+              # Create PR
+              gh pr create \
+                --title "hub-sync: update $FILE" \
+                --body "This PR updates $FILE to match the version in the hub repository." \
+                --base main \
+                --head "$BRANCH"
+            else
+              echo "File $FILE is up to date."
+            fi
+          done
+          git checkout main

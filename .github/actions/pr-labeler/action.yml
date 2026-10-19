@@ -1,0 +1,75 @@
+name: 'PR Labeler'
+description: 'Automatically adds labels to PRs based on the files changed'
+inputs:
+  github_token:
+    description: 'GitHub Token'
+    required: true
+  pr_number:
+    description: 'PR Number'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Fetch base reference
+      shell: bash
+      run: git fetch origin ${{ github.base_ref }}
+
+    - name: Read and Convert Config
+      shell: bash
+      run: |
+        CONFIG_PATH=".github/label-config.yml"
+        if [ ! -f "$CONFIG_PATH" ]; then
+          echo "Error: Config file not found at $CONFIG_PATH"
+          exit 1
+        fi
+        npx --yes js-yaml@4.1.0 "$CONFIG_PATH" > config.json
+
+    - name: Determine Labels
+      shell: bash
+      env:
+        BASE_REF: ${{ github.base_ref }}
+        HEAD_REF: ${{ github.head_ref }}
+      run: |
+        if [ ! -f "config.json" ]; then
+          echo "Error: config.json not found"
+          exit 1
+        fi
+        CONFIG_JSON=$(cat config.json)
+
+        # Get list of changed files
+        FILES=$(git diff --name-only origin/$BASE_REF...HEAD)
+        echo "Changed files: $FILES"
+
+        # Collect labels from branch and file mappings
+        BRANCH_LABELS=""
+
+        if [ -n "$HEAD_REF" ]; then
+          echo "Checking branch: $HEAD_REF"
+          BRANCH_LABELS="$(echo "$CONFIG_JSON" | jq -r --arg ref "$HEAD_REF" '.branch_mappings | to_entries[] | .key as $k | select($ref | startswith($k)) | .value')"
+        fi
+
+        FILE_LABELS="$(echo "$CONFIG_JSON" | jq -r --arg files "$FILES" '.file_mappings | to_entries[] | .value as $v | select($files | test($v)) | .key')"
+        ALL_LABELS="$(printf '%s\n%s' "$BRANCH_LABELS" "$FILE_LABELS")"
+
+        # Deduplicate and format as comma-separated
+        FINAL_LABELS=$(echo "$ALL_LABELS" | grep -v '^$' | sort -u | paste -sd "," -)
+
+        echo "LABELS=$FINAL_LABELS" >> $GITHUB_ENV
+
+    - name: Apply Labels
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+        PR_NUMBER: ${{ inputs.pr_number }}
+      run: |
+        if [ -n "$LABELS" ]; then
+          echo "Adding labels: $LABELS"
+          IFS=',' read -ra ADDR <<< "$LABELS"
+          for label in "${ADDR[@]}"; do
+            label=$(echo "$label" | sed 's/^ *//; s/ *$//')
+            curl -sf -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/labels" -d "$(jq -n --arg l "$label" '{"labels":[$l]}')" > /dev/null
+          done
+        else
+          echo "No labels to add."
+        fi

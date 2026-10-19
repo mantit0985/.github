@@ -1,0 +1,57 @@
+#!/bin/sh
+# commit-msg — the hook baseline.
+# Gate 1: no AI attribution from any assistant, anywhere in the message.
+# Gate 2: strict Conventional Commits subject.
+# Usage: commit-msg <message-file>
+# The CI hygiene gate (ci.yml) and Commit Linting step (pr-validator.yml)
+# fetch and run this same script per commit; keep rules defined only here.
+
+MSG_FILE="${1:?usage: commit-msg <message-file>}"
+
+# --- Gate 1: AI attribution (any assistant) ---
+# Known assistant/AI tool names inside Co-Authored-By lines (case-insensitive,
+# word-boundary matched so substrings cannot false-positive on human names),
+# column-0 generator footers, and robot-emoji lines.
+ATTR='co-authored-by:[[:space:]]*\b(claude|anthropic|copilot|chatgpt|openai|codex|gpt|gemini|cursor|deepseek|qwen|mistral|glm|kimi|moonshot|grok|devin|codeium|windsurf|amazon ?q)\b|(generated|assisted|written|created) (with|by|using)|🤖'
+
+if grep -iEq "$ATTR" "$MSG_FILE"; then
+    echo "ERROR: AI attribution lines are not allowed in commits." >&2
+    grep -inE "$ATTR" "$MSG_FILE" >&2
+    exit 1
+fi
+
+# --- Gate 2: strict Conventional Commits subject ---
+SUBJECT=$(head -n 1 "$MSG_FILE")
+# Root-commit exemption: the canonical first commit of a fresh repo (exact match, body empty). Gate 1 still applies. Range validators enforce root-only via parent-count guard.
+if [ "$(cat "$MSG_FILE")" = "Initial commit" ]; then
+    exit 0
+fi
+
+# Merge commits: GitHub's auto-generated pull_request merge-preview subjects
+# and standard merge-commit subjects are not author content; Gate 1 still applies.
+case "$SUBJECT" in
+    "Merge "*) exit 0 ;;
+esac
+
+CONV='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9][a-z0-9._/-]*\))?!?: [a-z0-9]'
+if ! printf '%s\n' "$SUBJECT" | grep -Eq "$CONV"; then
+    echo "ERROR: commit subject does not follow strict Conventional Commits." >&2
+    echo "Format: <type>(<scope>)?: <description>" >&2
+    echo "Types: feat fix docs style refactor perf test build ci chore revert" >&2
+    echo "Scope: optional, lowercase alphanumerics with . / _ -" >&2
+    echo "Description must start with a lowercase letter or digit." >&2
+    echo "Subject: $SUBJECT" >&2
+    exit 1
+fi
+
+case "$SUBJECT" in
+    *[[:space:]]) echo "ERROR: commit subject must not end with whitespace." >&2; exit 1 ;;
+    *.) echo "ERROR: commit subject must not end with a period." >&2; exit 1 ;;
+esac
+
+if [ "${#SUBJECT}" -gt 72 ]; then
+    echo "ERROR: commit subject exceeds 72 characters (${#SUBJECT})." >&2
+    exit 1
+fi
+
+exit 0

@@ -1,0 +1,27 @@
+name: 'Release actor gate'
+description: 'Restricts release acceptance to approved actors'
+inputs:
+  allowed-actors:
+    description: 'Comma-separated GitHub usernames allowed to trigger releases'
+    required: false
+    default: 'mantit0985'
+runs:
+  using: 'composite'
+  steps:
+    - name: Assert approved release actor
+      shell: bash
+      env:
+        ACTOR: ${{ github.triggering_actor }}
+        ACTOR_FALLBACK: ${{ github.actor }}
+        ALLOWED: ${{ inputs.allowed-actors }}
+      run: |
+        set -euo pipefail
+        check="${ACTOR:-$ACTOR_FALLBACK}"
+        for allowed in $(printf '%s' "$ALLOWED" | tr ',' ' '); do
+          if [ "$check" = "$allowed" ]; then
+            echo "Release actor allowed: $check"
+            exit 0
+          fi
+        done
+        echo "ERROR: releases are restricted to approved actors (allowed: $ALLOWED); acting actor: $check" >&2
+        exit 1

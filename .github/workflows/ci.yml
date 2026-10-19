@@ -1,0 +1,172 @@
+on:
+  workflow_call:
+    inputs:
+      language:
+        required: true
+        type: string
+      smoke-image:
+        required: true
+        type: string
+      build-verify-cmd:
+        required: false
+        type: string
+        default: ''
+      quality-cmd:
+        required: false
+        type: string
+        default: ''
+      working-dir:
+        required: false
+        type: string
+        default: '.'
+
+jobs:
+  quality:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Commit hygiene gate
+        uses: mantit0985/.github/.github/actions/commit-hygiene-gate@main
+        with:
+          before: ${{ github.event.before }}
+
+      - name: Setup Rust
+        if: inputs.language == 'rust'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Rust Checks
+        if: inputs.language == 'rust'
+        working-directory: ${{ inputs.working-dir }}
+        run: |
+          cargo fmt --all --check
+          cargo clippy -- -D warnings
+          cargo install cargo-audit && cargo audit --deny warnings
+          cargo test
+
+      - name: Rust Targets
+        if: inputs.language == 'rust-nostd'
+        working-directory: ${{ inputs.working-dir }}
+        run: rustup target add thumbv7em-none-eabihf
+
+      - name: Nostd Build
+        if: inputs.language == 'rust-nostd'
+        working-directory: ${{ inputs.working-dir }}
+        run: cargo build --target thumbv7em-none-eabihf
+
+      - name: Nostd Clippy
+        if: inputs.language == 'rust-nostd'
+        working-directory: ${{ inputs.working-dir }}
+        run: cargo fmt --all --check && cargo clippy --target thumbv7em-none-eabihf -- -D warnings
+
+      - name: Setup Python
+        if: inputs.language == 'python'
+        uses: astral-sh/setup-uv@v1
+
+      - name: Python Checks
+        if: inputs.language == 'python'
+        working-directory: ${{ inputs.working-dir }}
+        run: |
+          uvx ruff check .
+          uvx ruff format --check .
+          uv run --with pyright pyright --pythonversion 3.14
+          uv run pytest
+
+      - name: Setup Go
+        if: inputs.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Go Checks
+        if: inputs.language == 'go'
+        working-directory: ${{ inputs.working-dir }}
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then echo "gofmt failed" && exit 1; fi
+          go mod download
+          go test -v ./...
+
+      - name: Go Lint
+        if: inputs.language == 'go'
+        uses: golangci/golangci-lint-action@v7
+        with:
+          working-directory: ${{ inputs.working-dir }}
+
+      - name: Zig Setup
+        if: inputs.language == 'zig'
+        uses: mlugg/setup-zig@v2.2.1
+        with:
+          version: '0.13.0'
+
+      - name: Zig Build
+        if: inputs.language == 'zig'
+        working-directory: ${{ inputs.working-dir }}
+        run: zig build
+
+      - name: Setup pnpm
+        if: inputs.language == 'nodejs'
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        if: inputs.language == 'nodejs'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22
+
+      - name: Node.js Checks
+        if: inputs.language == 'nodejs'
+        working-directory: ${{ inputs.working-dir }}
+        run: |
+          pnpm install
+          pnpm run lint
+          pnpm run type-check
+          pnpm run test
+
+      - name: C++ Quality (custom)
+        if: inputs.language == 'cpp' && inputs.quality-cmd != ''
+        working-directory: ${{ inputs.working-dir }}
+        run: ${{ inputs.quality-cmd }}
+
+      - name: C++ Build
+        if: inputs.language == 'cpp' && inputs.quality-cmd == ''
+        working-directory: ${{ inputs.working-dir }}
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -O2 main.cpp -o cpp-service
+
+  build-verify:
+    runs-on: self-hosted
+    needs: [quality]
+    if: inputs.build-verify-cmd != ''
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Verify
+        env:
+          DOCKER_BUILDKIT: '1'
+        run: ${{ inputs.build-verify-cmd }}
+
+  security:
+    runs-on: self-hosted
+    needs: [quality, build-verify]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Security Scan
+        uses: mantit0985/.github/.github/actions/security-scan@main
+        with:
+          semgrep_config: ${{ (inputs.language == 'rust' && 'p/rust' ) || (inputs.language == 'python' && 'p/python' ) || (inputs.language == 'go' && 'p/golang' ) || (inputs.language == 'rust-nostd' && 'p/rust' ) || (inputs.language == 'zig' && 'p/docker' ) || (inputs.language == 'nodejs' && 'p/javascript' ) || (inputs.language == 'cpp' && 'p/auto' ) }}
+          image_name: ${{ inputs.smoke-image }}
+
+  smoke:
+    runs-on: self-hosted
+    needs: [security]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Smoke Test
+        uses: mantit0985/.github/.github/actions/smoke-test@main
+        with:
+          image_name: ${{ inputs.smoke-image }}

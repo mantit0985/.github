@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    about: Please follow the disclosure process in SECURITY.md instead of opening a public issue.
+    url: https://github.com/mantit0985/.github/security/advisories/new

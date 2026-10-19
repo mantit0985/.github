@@ -1,0 +1,53 @@
+#!/bin/sh
+# Pre-push hook: release gate on v* tags; document lint on every branch push.
+# Release gate can be bypassed for testing with RELEASE_GATE_SKIP=i-accept-red-releases.
+hook_dir=$(dirname $(readlink -f "$0"))
+# Parent-count guard: the subject 'Initial commit' is legal ONLY as a repo's root commit.
+# Mirrors the commit-hygiene-gate action; range-side enforcement of the root-only rule.
+guard_initial_commit() {
+    for sha in "$@"; do
+        subject=$(git log -1 --format=%s "$sha")
+        if [ "$subject" = "Initial commit" ] && [ "$(git rev-list --parents -n 1 "$sha" | wc -w)" -gt 1 ]; then
+            echo "pre-push: commit $sha rejected: Initial commit subject outside root commit position." >&2
+            exit 1
+        fi
+    done
+}
+while read -r local_ref local_oid remote_ref remote_oid; do
+    case "$local_ref" in
+        refs/tags/v*)
+            tag_name=${local_ref#refs/tags/}
+            if [ -n "$RELEASE_GATE_SKIP" ] && [ "$RELEASE_GATE_SKIP" = "i-accept-red-releases" ]; then
+                :
+            else
+                "$hook_dir/release-gate.sh" "$tag_name" "$(git rev-parse --show-toplevel)"
+                if [ $? -ne 0 ]; then
+                    echo "release-gate: blocked push of $tag_name" >&2
+                    exit 1
+                fi
+            fi
+            ;;
+        refs/heads/*)
+            zero="0000000000000000000000000000000000000000"
+            if [ "$local_oid" = "$zero" ]; then
+                # branch deletion; nothing to lint
+                :
+            elif [ "$remote_oid" = "$zero" ]; then
+                base=$(git merge-base "origin/${local_ref#refs/heads/}" "$local_oid" 2>/dev/null || echo "")
+                if [ -n "$base" ]; then
+                    "$hook_dir/doc-lint.sh" "$base" "$local_oid" || exit 1
+                    guard_initial_commit $(git rev-list "$base".."$local_oid")
+                else
+                    "$hook_dir/doc-lint.sh" "" "$local_oid" || exit 1
+                    guard_initial_commit $(git rev-list -n 1 "$local_oid")
+                fi
+            else
+                "$hook_dir/doc-lint.sh" "$remote_oid" "$local_oid" || exit 1
+                guard_initial_commit $(git rev-list "$remote_oid".."$local_oid")
+            fi
+            ;;
+        *)
+            ;;
+    esac
+done
+exit 0

@@ -1,0 +1,83 @@
+name: 'Commit hygiene gate'
+description: 'Runs the shared hook baseline (.github/hooks/commit-msg) against each commit in the checked range'
+inputs:
+  before:
+    description: 'Push-range start SHA (github.event.before)'
+    required: false
+    default: ''
+  base:
+    description: 'PR base commit-ish; when set, checks base..head'
+    required: false
+    default: ''
+  head:
+    description: 'Head commit-ish (default HEAD)'
+    required: false
+    default: 'HEAD'
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate commits against hook baseline
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -f "${{ github.workspace }}/.github/hooks/commit-msg" ]; then
+          cp "${{ github.workspace }}/.github/hooks/commit-msg" /tmp/hook-commit-msg
+        else
+          curl -fsSL https://raw.githubusercontent.com/mantit0985/.github/main/.github/hooks/commit-msg -o /tmp/hook-commit-msg
+        fi
+        shas=""
+        if [ -n "${{ inputs.base }}" ]; then
+          shas=$(git rev-list "${{ inputs.base }}".."${{ inputs.head }}")
+        elif [ -n "${{ inputs.before }}" ] && [ "${{ inputs.before }}" != "0000000000000000000000000000000000000000" ]; then
+          before="${{ inputs.before }}"
+          if ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+            git fetch --no-tags --filter=blob:none origin "$before" \
+              || git fetch --no-tags --deepen=50 origin || true
+          fi
+          if git cat-file -e "$before^{commit}" 2>/dev/null; then
+            shas=$(git rev-list "$before"..HEAD)
+          else
+            echo "::warning::could not resolve before SHA ($before); checking HEAD commit only"
+          fi
+        fi
+        if [ -z "$shas" ]; then
+          shas=$(git rev-list -n 1 "${{ inputs.head }}")
+        fi
+        msg=$(mktemp)
+        for sha in $shas; do
+          git log -1 --format=%B "$sha" > "$msg"
+          # Parent-count guard: 'Initial commit' is only legal as a repo's root commit.
+          sha_subject=$(head -n 1 "$msg")
+          sha_parents=$(git rev-list --parents -n 1 "$sha")
+          if [ "$sha_subject" = "Initial commit" ] && [ "$(printf '%s\n' "$sha_parents" | wc -w)" -gt 1 ]; then
+            echo "Commit $sha rejected: Initial commit subject outside root commit position." >&2
+            exit 1
+          fi
+          if ! sh /tmp/hook-commit-msg "$msg"; then
+            echo "Commit $sha was rejected by the hook baseline (message above)." >&2
+            exit 1
+          fi
+        done
+    - name: Document lint (changed .md)
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -f "${{ github.workspace }}/.github/hooks/doc-lint.sh" ]; then
+          cp "${{ github.workspace }}/.github/hooks/doc-lint.sh" /tmp/hook-doc-lint
+        else
+          curl -fsSL https://raw.githubusercontent.com/mantit0985/.github/main/.github/hooks/doc-lint.sh -o /tmp/hook-doc-lint
+        fi
+        base='${{ inputs.base }}'
+        before='${{ inputs.before }}'
+        head='${{ inputs.head }}'
+        from=''
+        if [ -n "$base" ]; then
+          from="$base"
+        elif [ -n "$before" ] && [ "$before" != "0000000000000000000000000000000000000000" ]; then
+          from="$before"
+        fi
+        if [ -n "$from" ] && ! git cat-file -e "$from^{commit}" 2>/dev/null; then
+          echo "::warning::could not resolve range start ($from); linting all tracked documents" >&2
+          from=''
+        fi
+        sh /tmp/hook-doc-lint "$from" "$head"
