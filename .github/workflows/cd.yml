@@ -64,7 +64,8 @@ jobs:
     permissions:
       contents: write
       packages: write
-    runs-on: self-hosted    strategy:
+    runs-on: self-hosted
+    strategy:
       matrix:
         target:
         - runtime-slim
