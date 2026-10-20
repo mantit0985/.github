@@ -7,11 +7,16 @@ inputs:
   pr_number:
     description: 'PR Number'
     required: true
+  mode:
+    description: "Labeling mode: 'pr' (default) or 'issue'"
+    required: false
+    default: 'pr'
 
 runs:
   using: "composite"
   steps:
     - name: Fetch base reference
+      if: inputs.mode != 'issue'
       shell: bash
       run: git fetch origin ${{ github.base_ref }}
 
@@ -30,6 +35,9 @@ runs:
       env:
         BASE_REF: ${{ github.base_ref }}
         HEAD_REF: ${{ github.head_ref }}
+        MODE: ${{ inputs.mode }}
+        ISSUE_TITLE: ${{ github.event.issue.title }}
+        ISSUE_BODY: ${{ github.event.issue.body }}
       run: |
         if [ ! -f "config.json" ]; then
           echo "Error: config.json not found"
@@ -37,8 +45,12 @@ runs:
         fi
         CONFIG_JSON=$(cat config.json)
 
-        # Get list of changed files
-        FILES=$(git diff --name-only origin/$BASE_REF...HEAD)
+        # Get list of changed files; in issue mode use the issue title + body
+        if [ "$MODE" = "issue" ]; then
+          FILES=$(printf '%s\n%s' "$ISSUE_TITLE" "$ISSUE_BODY")
+        else
+          FILES=$(git diff --name-only origin/$BASE_REF...HEAD)
+        fi
         echo "Changed files: $FILES"
 
         # Collect labels from branch and file mappings
