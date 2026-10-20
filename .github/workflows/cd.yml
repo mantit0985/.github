@@ -88,7 +88,7 @@ jobs:
             tag: ${{ inputs.tag != '' && inputs.tag || github.ref_name }}
             release_artifact_path: ${{ inputs.release_artifact_path }}
             release_cmd: ${{ inputs.release_cmd }}
-            working-dir: ${{ inputs.working_dir }}
+            working-dir: ${{ inputs.working-dir }}
         strategy:
       matrix:
         target:
