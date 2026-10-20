@@ -10,6 +10,9 @@ inputs:
   release_cmd:
     required: false
     type: string
+  github_token:
+    required: true
+    type: string
   working-dir:
     required: false
     type: string
@@ -44,14 +47,14 @@ runs:
           shopt -s globstar dotglob
           cp -r ${{ inputs.release_artifact_path }} "${TARGET_DIR}/"
         else
-          tar -czf "${TARGET_DIR}/${{ env.GITHUB_REPOSITORY//\\//- }-${{ inputs.tag }}-source.tar.gz" --exclude=.git .
+          tar -czf "${TARGET_DIR}/${GITHUB_REPOSITORY//\//-}-${{ inputs.tag }}-source.tar.gz" --exclude=.git .
         fi
         (cd "${TARGET_DIR}" && find . -type f -print0 | sort -z | xargs -0 sha256sum --) > "$RUNNER_TEMP/SHA256SUMS"
         echo "Artifacts prepared in ${TARGET_DIR}"
     - name: Check for existing release
       shell: bash
       run: |
-        STATUS=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${{ env.REPO }}/releases/tags/${{ inputs.tag }}")
+        STATUS=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${{ inputs.github_token }}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${{ env.REPO }}/releases/tags/${{ inputs.tag }}")
         if [ "$STATUS" = "200" ]; then
           echo "RELEASE_EXISTS: Release ${{ inputs.tag }} already exists" >&2
           exit 1
@@ -59,7 +62,7 @@ runs:
     - name: Create release and upload assets
       shell: bash
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ inputs.github_token }}
       run: |
         TAG="${{ inputs.tag }}"
         BODY="$(awk -v t="## ${TAG}" '$0==t{f=1;next} f&&/^## /{exit} f' CHANGELOG.md || true)"
@@ -67,20 +70,18 @@ runs:
           echo "NO_CHANGELOG_SECTION: CHANGELOG.md must contain a '## ${TAG}' section at the tagged commit (deliberate: no silent releases)" >&2
           exit 1
         fi
-        RESP=$(curl -sf -X POST -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${{ env.REPO }}/releases" -d "$(jq -n --arg tag "$TAG" --arg body "$BODY" '{tag_name:$tag, name:$tag, body:$body}')")
+        RESP=$(curl -sf -X POST -H "Authorization: Bearer ${{ inputs.github_token }}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${{ env.REPO }}/releases" -d "$(jq -n --arg tag "$TAG" --arg body "$BODY" '{tag_name:$tag, name:$tag, body:$body}')")
         REL_ID=$(echo "$RESP" | jq -r '.id')
         if [ -z "$REL_ID" ] || [ "$REL_ID" = "null" ]; then echo "RELEASE_CREATE_FAILED: $(echo "$RESP" | head -c 400)" >&2; exit 1; fi
         cd "$TARGET_DIR"
         upload_asset() {
           local FILE="$1" NAME
           NAME=$(basename "$FILE")
-          ASSET_ID=$(curl -sf -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${{ env.REPO }}/releases/${REL_ID}/assets" | jq -r --arg n "$NAME" '[.[] | select(.name==$n)][0].id // empty')
+          ASSET_ID=$(curl -sf -H "Authorization: Bearer ${{ inputs.github_token }}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${{ env.REPO }}/releases/${REL_ID}/assets" | jq -r --arg n "$NAME" '[.[] | select(.name==$n)][0].id // empty')
           if [ -n "$ASSET_ID" ]; then
-            curl -sf -X DELETE -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${{ env.REPO }}/assets/${ASSET_ID}"
+            curl -sf -X DELETE -H "Authorization: Bearer ${{ inputs.github_token }}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${{ env.REPO }}/assets/${ASSET_ID}"
           fi
-          curl -sf -X POST -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H 'Accept: application/vnd.github+json' -H 'Content-Type: application/octet-stream' --data-binary "@${FILE}" "https://uploads.github.com/repos/${{ env.REPO }}/releases/${REL_ID}/assets?name=${NAME}"
+          curl -sf -X POST -H "Authorization: Bearer ${{ inputs.github_token }}" -H 'Accept: application/vnd.github+json' -H 'Content-Type: application/octet-stream' --data-binary "@${FILE}" "https://uploads.github.com/repos/${{ env.REPO }}/releases/${REL_ID}/assets?name=${NAME}"
         }
         find . -type f | sed 's|^./||' | while read -r f; do upload_asset "$TARGET_DIR/$f"; done
         upload_asset "$RUNNER_TEMP/SHA256SUMS"
-env:
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
