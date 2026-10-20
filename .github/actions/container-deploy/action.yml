@@ -36,6 +36,27 @@ runs:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ inputs.registry_token }}
+    # Arch policy: the amd64 leg is the REQUIRED release-critical path; the
+    # emulated arm64 leg is an external courtesy artifact and is ISOLATED so
+    # QEMU flakiness can never block or fail a release publish. The courtesy
+    # leg runs first; the required amd64 leg runs last and owns the contract
+    # tags (last writer wins, with the legs serialized inside this composite).
+    - name: Build and Push (arm64 courtesy)
+      uses: docker/build-push-action@v5
+      continue-on-error: true
+      with:
+        context: ${{ inputs.context }}
+        target: ${{ inputs.target }}
+        push: true
+        tags: |
+          ghcr.io/${{ inputs.image_name }}:${{ inputs.target }}
+          ghcr.io/${{ inputs.image_name }}:latest-${{ inputs.target }}
+          ghcr.io/${{ inputs.image_name }}:${{ inputs.tag }}-${{ inputs.target }}
+        build-args: ${{ inputs.build_args }}
+        platforms: linux/arm64
+        # per-run builder from the setup step: layers do not persist between
+        # runs, so push relies on the registry rather than node cache
+
     - name: Build and Push
       uses: docker/build-push-action@v5
       with:
@@ -47,6 +68,6 @@ runs:
           ghcr.io/${{ inputs.image_name }}:latest-${{ inputs.target }}
           ghcr.io/${{ inputs.image_name }}:${{ inputs.tag }}-${{ inputs.target }}
         build-args: ${{ inputs.build_args }}
-        platforms: linux/amd64,linux/arm64
+        platforms: linux/amd64
         # per-run builder from the setup step: layers do not persist between
         # runs, so push relies on the registry rather than node cache
