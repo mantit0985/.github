@@ -45,5 +45,6 @@ runs:
           ghcr.io/${{ inputs.image_name }}:${{ inputs.tag }}-${{ inputs.target }}
         build-args: ${{ inputs.build_args }}
         platforms: linux/amd64,linux/arm64
+        # gha cache: repo-scoped; mode=max keeps full multiarch layer chains; no GHCR tags created
         cache-from: type=gha
         cache-to: type=gha,mode=max
