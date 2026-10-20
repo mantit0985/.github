@@ -108,6 +108,38 @@ jobs:
           fi
           echo "PASS[3] Latest CI run succeeded"
 
+      - name: Verify CD run terminal state
+        shell: bash
+        run: |
+          TAG_COMMIT=$(git rev-parse HEAD)
+          REPO=$(git remote get-url --push origin | sed -E -e 's|\.git/?$||' -e 's|.*github\.com[/:]([^/]+)/([^/]+)/?$|\1/\2|')
+          API_URL="https://api.github.com/repos/${REPO}/actions/runs?head_sha=${TAG_COMMIT}"
+          HTTP_CODE=$(curl -s -o "${RUNNER_TEMP}/cd_runs.json" -w '%{http_code}' -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "${API_URL}")
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "FAIL[5]: CD run lookup failed (HTTP ${HTTP_CODE}) for commit ${TAG_COMMIT}" >&2
+            exit 1
+          fi
+          CD_RUNS=$(jq -r '[.workflow_runs[] | select(.name | startswith("CD"))]' "${RUNNER_TEMP}/cd_runs.json")
+          if [ "$(echo "$CD_RUNS" | jq 'length')" -eq 0 ]; then
+            echo "FAIL[5]: no CD run for commit" >&2
+            exit 1
+          fi
+          FIRST_CONCLUSION=$(echo "$CD_RUNS" | jq -r '.[0].conclusion // empty')
+          FIRST_STATUS=$(echo "$CD_RUNS" | jq -r '.[0].status // empty')
+          if [ -n "$FIRST_STATUS" ] && [ "$FIRST_STATUS" != "completed" ]; then
+            echo "WAIT-marker CD not yet terminal; caller re-invocation re-evaluates" >&2
+            exit 0
+          fi
+          if [ -z "$FIRST_CONCLUSION" ]; then
+            echo "FAIL[5]: CD run status incomplete" >&2
+            exit 1
+          fi
+          if [ "$FIRST_CONCLUSION" != "success" ] && [ "$FIRST_CONCLUSION" != "skipped" ]; then
+            echo "FAIL[5]: CD run concluded $FIRST_CONCLUSION" >&2
+            exit 1
+          fi
+          echo "PASS[5] CD run succeeded or completed-skip"
+
       - name: Verify tag signature via API
         shell: bash
         run: |
@@ -165,7 +197,7 @@ jobs:
             shopt -s globstar dotglob
             cp -r ${{ inputs.release_artifact_path }} "${TARGET_DIR}/"
           else
-            tar -czf "${TARGET_DIR}/${GITHUB_REPOSITORY//\//-}-${{ inputs.tag }}-source.tar.gz" --exclude=.git .
+            tar -czf "${TARGET_DIR}/${GITHUB_REPOSITORY////$'-'}-${{ inputs.tag }}-source.tar.gz" --exclude=.git .
           fi
           # Generate SHA256SUMS
           (cd "${TARGET_DIR}" && find . -type f -print0 | sort -z | xargs -0 sha256sum --) > "$RUNNER_TEMP/SHA256SUMS"
