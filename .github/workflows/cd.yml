@@ -81,7 +81,15 @@ jobs:
         tag: ${{ inputs.tag != '' && inputs.tag || github.sha }}
         target: ${{ matrix.target }}
         context: ${{ inputs.working-dir }}
-    strategy:
+            - name: Publish Release
+          if: startsWith(github.ref, 'refs/tags/v')
+          uses: ./.github/actions/publish-release
+          with:
+            tag: ${{ inputs.tag != '' && inputs.tag || github.ref_name }}
+            release_artifact_path: ${{ inputs.release_artifact_path }}
+            release_cmd: ${{ inputs.release_cmd }}
+            working-dir: ${{ inputs.working_dir }}
+        strategy:
       matrix:
         target:
         - runtime-slim

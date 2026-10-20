@@ -1,0 +1,86 @@
+name: Publish Release
+description: Publish a GitHub release for an existing tag.
+inputs:
+  tag:
+    required: true
+    type: string
+  release_artifact_path:
+    required: false
+    type: string
+  release_cmd:
+    required: false
+    type: string
+  working-dir:
+    required: false
+    type: string
+    default: '.'
+permissions:
+  contents: write
+  actions: read
+runs:
+  using: composite
+  steps:
+    - name: Release actor gate
+      uses: mantit0985/.github/.github/actions/release-actor-gate@main
+    - name: Checkout tag
+      uses: actions/checkout@v4
+      with:
+        ref: refs/tags/${{ inputs.tag }}
+    - name: Resolve repo slug
+      shell: bash
+      run: |
+        REPO=$(git remote get-url --push origin | sed -E -e 's|\.git/?$||' -e 's|.*github\.com[/:]([^/]+)/([^/]+)/?$|\1/\2|')
+        echo "REPO=$REPO" >> "$GITHUB_ENV"
+    - name: Run release command if specified
+      if: ${{ inputs.release_cmd != '' }}
+      working-directory: ${{ inputs.working-dir }}
+      run: ${{ inputs.release_cmd }}
+    - name: Prepare artifacts
+      shell: bash
+      run: |
+        TARGET_DIR=$(mktemp -d)
+        echo "TARGET_DIR=$TARGET_DIR" >> "$GITHUB_ENV"
+        if [ -n "${{ inputs.release_artifact_path }}" ]; then
+          shopt -s globstar dotglob
+          cp -r ${{ inputs.release_artifact_path }} "${TARGET_DIR}/"
+        else
+          tar -czf "${TARGET_DIR}/${{ env.GITHUB_REPOSITORY//\\//- }-${{ inputs.tag }}-source.tar.gz" --exclude=.git .
+        fi
+        (cd "${TARGET_DIR}" && find . -type f -print0 | sort -z | xargs -0 sha256sum --) > "$RUNNER_TEMP/SHA256SUMS"
+        echo "Artifacts prepared in ${TARGET_DIR}"
+    - name: Check for existing release
+      shell: bash
+      run: |
+        STATUS=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${{ env.REPO }}/releases/tags/${{ inputs.tag }}")
+        if [ "$STATUS" = "200" ]; then
+          echo "RELEASE_EXISTS: Release ${{ inputs.tag }} already exists" >&2
+          exit 1
+        fi
+    - name: Create release and upload assets
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TAG="${{ inputs.tag }}"
+        BODY="$(awk -v t="## ${TAG}" '$0==t{f=1;next} f&&/^## /{exit} f' CHANGELOG.md || true)"
+        if [ -z "$BODY" ]; then
+          echo "NO_CHANGELOG_SECTION: CHANGELOG.md must contain a '## ${TAG}' section at the tagged commit (deliberate: no silent releases)" >&2
+          exit 1
+        fi
+        RESP=$(curl -sf -X POST -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${{ env.REPO }}/releases" -d "$(jq -n --arg tag "$TAG" --arg body "$BODY" '{tag_name:$tag, name:$tag, body:$body}')")
+        REL_ID=$(echo "$RESP" | jq -r '.id')
+        if [ -z "$REL_ID" ] || [ "$REL_ID" = "null" ]; then echo "RELEASE_CREATE_FAILED: $(echo "$RESP" | head -c 400)" >&2; exit 1; fi
+        cd "$TARGET_DIR"
+        upload_asset() {
+          local FILE="$1" NAME
+          NAME=$(basename "$FILE")
+          ASSET_ID=$(curl -sf -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${{ env.REPO }}/releases/${REL_ID}/assets" | jq -r --arg n "$NAME" '[.[] | select(.name==$n)][0].id // empty')
+          if [ -n "$ASSET_ID" ]; then
+            curl -sf -X DELETE -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${{ env.REPO }}/assets/${ASSET_ID}"
+          fi
+          curl -sf -X POST -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H 'Accept: application/vnd.github+json' -H 'Content-Type: application/octet-stream' --data-binary "@${FILE}" "https://uploads.github.com/repos/${{ env.REPO }}/releases/${REL_ID}/assets?name=${NAME}"
+        }
+        find . -type f | sed 's|^./||' | while read -r f; do upload_asset "$TARGET_DIR/$f"; done
+        upload_asset "$RUNNER_TEMP/SHA256SUMS"
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
