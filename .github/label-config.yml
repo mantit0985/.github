@@ -1,4 +1,6 @@
 # Version 1.1
+# Default label applied to newly opened issues
+issue_default_label: triage
 # Map branch prefixes to labels
 branch_mappings:
   feat/: enhancement
