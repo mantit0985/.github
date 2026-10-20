@@ -65,7 +65,7 @@ runs:
         ALL_LABELS="$(printf '%s\n%s' "$BRANCH_LABELS" "$FILE_LABELS")"
 
         # Deduplicate and format as comma-separated
-        FINAL_LABELS=$(echo "$ALL_LABELS" | grep -v '^$' | sort -u | paste -sd "," -)
+        FINAL_LABELS=$(echo "$ALL_LABELS" | grep -v '^$' | sort -u | paste -sd "," - || true)
 
         echo "LABELS=$FINAL_LABELS" >> $GITHUB_ENV
 
