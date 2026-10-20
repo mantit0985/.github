@@ -64,13 +64,6 @@ runs:
         FILE_LABELS="$(echo "$CONFIG_JSON" | jq -r --arg files "$FILES" '.file_mappings | to_entries[] | .value as $v | select($files | test($v)) | .key')"
         ALL_LABELS="$(printf '%s\n%s' "$BRANCH_LABELS" "$FILE_LABELS")"
 
-        # Issue mode: add the configured default label for issues
-        if [ "$MODE" = "issue" ]; then
-          DEFAULT_LABEL="$(echo "$CONFIG_JSON" | jq -r '.issue_default_label // empty')"
-          echo "Issue default label: $DEFAULT_LABEL"
-          ALL_LABELS="$(printf '%s\n%s' "$ALL_LABELS" "$DEFAULT_LABEL")"
-        fi
-
         # Deduplicate and format as comma-separated
         FINAL_LABELS=$(echo "$ALL_LABELS" | grep -v '^$' | sort -u | paste -sd "," -)
 
