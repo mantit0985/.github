@@ -62,9 +62,15 @@ jobs:
     - ci-gate
     - release
     permissions:
-      contents: read
+      contents: write
       packages: write
-    runs-on: self-hosted
+    runs-on: self-hosted    strategy:
+      matrix:
+        target:
+        - runtime-slim
+        - runtime-alpine
+        - runtime-distroless
+
     steps:
     - uses: actions/checkout@v4
       with:
@@ -92,12 +98,6 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        strategy:
-      matrix:
-        target:
-        - runtime-slim
-        - runtime-alpine
-        - runtime-distroless
   release:
     if: ${{ inputs.release_cmd != '' }}
     name: Specialized Release

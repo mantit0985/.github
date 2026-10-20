@@ -68,7 +68,7 @@ runs:
       if [ "$HTTP_CODE" != "200" ]; then echo "FAIL[3]: CI run lookup failed (HTTP
       ${HTTP_CODE}) for commit ${TAG_COMMIT}" >&2; exit 1; fi
 
-      CI_CONCLUSION=$(jq -r ''[.workflow_runs[] | select(.name | startswith("CI"))
+      CI_CONCLUSION=$(jq -r ''[.workflow_runs[] | select(.name == "CI")
       | .conclusion][0] // empty'' "${RUNNER_TEMP}/ci_runs.json")
 
       if [ -z "$CI_CONCLUSION" ]; then echo "FAIL[3]: No CI run found for commit $TAG_COMMIT"
@@ -123,6 +123,7 @@ runs:
   - name: Run release command if specified
     if: ${{ inputs.release_cmd != '' }}
     working-directory: ${{ inputs.working-dir }}
+    shell: bash
     run: ${{ inputs.release_cmd }}
   - name: Prepare artifacts
     shell: bash
