@@ -101,7 +101,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   release:
     if: ${{ inputs.release_cmd != '' }}
-    name: Specialized Release
+    name: Stable Release
     runs-on: self-hosted
     steps:
     - uses: actions/checkout@v4
