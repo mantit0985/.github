@@ -67,6 +67,9 @@ jobs:
       actions: read
     runs-on: self-hosted
     strategy:
+      # Serialize the matrix legs: each leg pushes the same GHCR repository, so
+      # only one may run at a time to avoid the concurrent-push "blob upload invalid" race.
+      max-parallel: 1
       matrix:
         target:
         - runtime-slim
