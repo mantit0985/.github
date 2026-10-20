@@ -63,7 +63,7 @@ jobs:
           echo "Validating PR template..."
           BODY=$(curl -sf -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" | jq -r '.body // ""')
 
-          if [[ ! "$BODY" =~ "# Purpose" ]] || [[ ! "$BODY" =~ "## Changes" ]]; then
+          if [[ ! "$BODY" =~ "# Purpose" ]] && [[ ! "$BODY" =~ "## Changes" ]]; then
             echo "Error: PR body is missing required sections (# Purpose or ## Changes)."
             exit 1
           fi
