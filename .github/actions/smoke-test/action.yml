@@ -31,6 +31,11 @@ runs:
     - name: Probe Endpoints
       shell: bash
       run: |
+        # Probes share the smoke container's network namespace so the check is
+        # independent of bridge/overlay topology: a swarm-task runner cannot
+        # reach a default-bridge IP (DOCKER-ISOLATION), and bridge IPs of
+        # persistent runners are not stable either. curlimages/curl image is
+        # pinned because the app image itself may lack curl/wget.
         PROBE="curlimages/curl:8.23.0"
 
         echo "Probing endpoints in-container (netns-shared) on port ${{ inputs.port }}"
