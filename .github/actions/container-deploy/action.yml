@@ -25,8 +25,12 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+    - name: Ensure persistent buildx builder
+      shell: bash
+      run: |
+        docker buildx inspect hub-multiarch >/dev/null 2>&1 || \
+          docker buildx create --name hub-multiarch --driver docker-container --bootstrap
+        docker buildx use hub-multiarch
     - name: Login to GHCR
       uses: docker/login-action@v3
       with:
@@ -45,6 +49,5 @@ runs:
           ghcr.io/${{ inputs.image_name }}:${{ inputs.tag }}-${{ inputs.target }}
         build-args: ${{ inputs.build_args }}
         platforms: linux/amd64,linux/arm64
-        # gha cache: repo-scoped; mode=max keeps full multiarch layer chains; no GHCR tags created
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        # cache lives inside the persistent hub-multiarch builder container on
+        # each node — no per-run gha cache upload/download over the uplink
