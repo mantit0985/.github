@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.2.0
+
+### Added
+
+- publish-release composite action embedded as the final CD step (gates: tag==VERSION, commit hygiene, latest-CI-success, annotated+signed tag)
+- deploy job grants contents:write so release creation and asset upload succeed
+- pr-validator template-section check repaired to true-OR semantics
+
+
 ## v0.1.0
 
 ### Added
