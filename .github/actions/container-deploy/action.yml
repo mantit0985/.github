@@ -42,32 +42,52 @@ runs:
     # leg runs first; the required amd64 leg runs last and owns the contract
     # tags (last writer wins, with the legs serialized inside this composite).
     - name: Build and Push (arm64 courtesy)
-      uses: docker/build-push-action@v5
+      run: |
+        for attempt in {1..5}; do
+          if [ -n "${{ inputs.build_args }}" ]; then
+            docker buildx build --platform linux/arm64 \
+              ${{ inputs.build_args }} \
+              --push \
+              --tag ghcr.io/${{ inputs.image_name }}:${{ inputs.target }} \
+              --tag ghcr.io/${{ inputs.image_name }}:latest-${{ inputs.target }} \
+              --tag ghcr.io/${{ inputs.image_name }}:${{ inputs.tag }}-${{ inputs.target }} \
+              ${{ inputs.context }}
+          else
+            docker buildx build --platform linux/arm64 \
+              --push \
+              --tag ghcr.io/${{ inputs.image_name }}:${{ inputs.target }} \
+              --tag ghcr.io/${{ inputs.image_name }}:latest-${{ inputs.target }} \
+              --tag ghcr.io/${{ inputs.image_name }}:${{ inputs.tag }}-${{ inputs.target }} \
+              ${{ inputs.context }}
+          fi
+          rc=$?
+          if [ $rc -eq 0 ]; then break; fi
+          if [ $attempt -eq 5 ]; then exit $rc; fi
+          sleep 30
+        done
       continue-on-error: true
-      with:
-        context: ${{ inputs.context }}
-        target: ${{ inputs.target }}
-        push: true
-        tags: |
-          ghcr.io/${{ inputs.image_name }}:${{ inputs.target }}
-          ghcr.io/${{ inputs.image_name }}:latest-${{ inputs.target }}
-          ghcr.io/${{ inputs.image_name }}:${{ inputs.tag }}-${{ inputs.target }}
-        build-args: ${{ inputs.build_args }}
-        platforms: linux/arm64
-        # per-run builder from the setup step: layers do not persist between
-        # runs, so push relies on the registry rather than node cache
 
     - name: Build and Push
-      uses: docker/build-push-action@v5
-      with:
-        context: ${{ inputs.context }}
-        target: ${{ inputs.target }}
-        push: true
-        tags: |
-          ghcr.io/${{ inputs.image_name }}:${{ inputs.target }}
-          ghcr.io/${{ inputs.image_name }}:latest-${{ inputs.target }}
-          ghcr.io/${{ inputs.image_name }}:${{ inputs.tag }}-${{ inputs.target }}
-        build-args: ${{ inputs.build_args }}
-        platforms: linux/amd64
-        # per-run builder from the setup step: layers do not persist between
-        # runs, so push relies on the registry rather than node cache
+      run: |
+        for attempt in {1..5}; do
+          if [ -n "${{ inputs.build_args }}" ]; then
+            docker buildx build --platform linux/amd64 \
+              ${{ inputs.build_args }} \
+              --push \
+              --tag ghcr.io/${{ inputs.image_name }}:${{ inputs.target }} \
+              --tag ghcr.io/${{ inputs.image_name }}:latest-${{ inputs.target }} \
+              --tag ghcr.io/${{ inputs.image_name }}:${{ inputs.tag }}-${{ inputs.target }} \
+              ${{ inputs.context }}
+          else
+            docker buildx build --platform linux/amd64 \
+              --push \
+              --tag ghcr.io/${{ inputs.image_name }}:${{ inputs.target }} \
+              --tag ghcr.io/${{ inputs.image_name }}:latest-${{ inputs.target }} \
+              --tag ghcr.io/${{ inputs.image_name }}:${{ inputs.tag }}-${{ inputs.target }} \
+              ${{ inputs.context }}
+          fi
+          rc=$?
+          if [ $rc -eq 0 ]; then break; fi
+          if [ $attempt -eq 5 ]; then exit $rc; fi
+          sleep 30
+        done
