@@ -7,6 +7,10 @@ inputs:
   image_name:
     description: 'Image name to scan with Trivy'
     required: true
+  ignorefile:
+    description: 'Relative path(s) to .trivyignore file(s) for the Trivy FS scan. Empty = Trivy default (.trivyignore at the scan root).'
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -26,6 +30,7 @@ runs:
         format: 'table'
         exit-code: '1'
         severity: 'CRITICAL,HIGH'
+        trivyignores: ${{ inputs.ignorefile }}
 
     - name: Trivy Image Scan
       uses: aquasecurity/trivy-action@master
