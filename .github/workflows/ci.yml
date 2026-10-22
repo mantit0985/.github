@@ -153,6 +153,11 @@ jobs:
     needs: [quality, build-verify]
     steps:
       - uses: actions/checkout@v4
+      - name: Build scan target
+        if: inputs.build-verify-cmd != ''
+        env:
+          DOCKER_BUILDKIT: '1'
+        run: ${{ inputs.build-verify-cmd }}
       - name: Security Scan
         uses: mantit0985/.github/.github/actions/security-scan@main
         with:
@@ -164,6 +169,11 @@ jobs:
     needs: [security]
     steps:
       - uses: actions/checkout@v4
+      - name: Build scan target
+        if: inputs.build-verify-cmd != ''
+        env:
+          DOCKER_BUILDKIT: '1'
+        run: ${{ inputs.build-verify-cmd }}
       - name: Smoke Test
         uses: mantit0985/.github/.github/actions/smoke-test@main
         with:
