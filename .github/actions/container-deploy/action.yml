@@ -65,6 +65,7 @@ runs:
           if [ $attempt -eq 5 ]; then exit $rc; fi
           sleep 30
         done
+      shell: bash
       continue-on-error: true
 
     - name: Build and Push
@@ -91,3 +92,4 @@ runs:
           if [ $attempt -eq 5 ]; then exit $rc; fi
           sleep 30
         done
+      shell: bash
