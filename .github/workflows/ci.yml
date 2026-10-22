@@ -19,6 +19,10 @@ on:
         required: false
         type: string
         default: '.'
+      ignorefile:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   quality:
@@ -153,11 +157,18 @@ jobs:
     needs: [quality, build-verify]
     steps:
       - uses: actions/checkout@v4
+      - name: Build Image For Scan
+        if: inputs.build-verify-cmd != ''
+        working-directory: ${{ inputs.working-dir }}
+        env:
+          DOCKER_BUILDKIT: '1'
+        run: ${{ inputs.build-verify-cmd }}
       - name: Security Scan
         uses: mantit0985/.github/.github/actions/security-scan@main
         with:
           semgrep_config: ${{ (inputs.language == 'rust' && 'p/rust' ) || (inputs.language == 'python' && 'p/python' ) || (inputs.language == 'go' && 'p/golang' ) || (inputs.language == 'rust-nostd' && 'p/rust' ) || (inputs.language == 'zig' && 'p/docker' ) || (inputs.language == 'nodejs' && 'p/javascript' ) || (inputs.language == 'cpp' && 'p/auto' ) }}
           image_name: ${{ inputs.smoke-image }}
+          ignorefile: ${{ inputs.ignorefile }}
 
   smoke:
     runs-on: self-hosted
