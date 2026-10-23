@@ -33,6 +33,10 @@ The `pr-labeler.yml` workflow uses a local composite action to apply labels:
   gh api -X PUT repos/mantit0985/.github/actions/workflows/<id>/disable
   ```
 
+## Clone Policy
+
+This repository is kept as exactly one canonical clone in the workspaces tree. A second clone of this repo at a different age (for example mirrored under a baseline or doctrine src tree) is stale-risk dirt: retire it or fast-forward it, then read back both clones before and after. The workspace-doctrine heavy sweep re-verifies this census.
+
 ## Troubleshooting
 
 - **GH007 Push Error**: Occurs when commits use a private email. Use the GitHub noreply address: `282219401+mantit0985@users.noreply.github.com`.
